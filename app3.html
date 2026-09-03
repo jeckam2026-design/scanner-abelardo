@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consulta de Asistencia - I.E.P. José Abelardo Quiñones Gonzales</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+    padding: 0;
+    color: #222;
+  }
+  header {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  header img.logo {
+    height: 64px;
+    width: auto;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  .contenedor {
+    max-width: 480px;
+    margin: 20px auto;
+    padding: 0 16px 40px;
+  }
+  .tarjeta {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  .tarjeta h2 {
+    font-size: 16px;
+    margin: 0 0 12px;
+    color: #1e3a5f;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin: 10px 0 4px;
+    color: #444;
+  }
+  input[type="text"], input[type="date"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 14px;
+    border: none;
+    border-radius: 6px;
+    background: #1e3a5f;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button.secundario {
+    background: #e8edf3;
+    color: #1e3a5f;
+    margin-top: 8px;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .toggle-rango {
+    font-size: 13px;
+    color: #1e3a5f;
+    text-decoration: underline;
+    cursor: pointer;
+    display: inline-block;
+    margin-top: 10px;
+  }
+  #rango-personalizado {
+    display: none;
+    margin-top: 8px;
+    border-top: 1px dashed #ddd;
+    padding-top: 8px;
+  }
+  .mensaje-error {
+    background: #fdecea;
+    color: #b3261e;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .info-estudiante {
+    background: #eef4ff;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  .info-estudiante strong { display: block; font-size: 15px; color: #1e3a5f; }
+  .info-estudiante span { font-size: 13px; color: #555; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th, td {
+    padding: 7px 5px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+  }
+  th {
+    background: #f6f8fa;
+    color: #444;
+    font-size: 11px;
+  }
+  .estado {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 11px;
+    display: inline-block;
+  }
+  .PUNTUAL, .SALIDA-OK { background: #d9f2df; color: #1a7a3a; }
+  .TARDE { background: #fff3cd; color: #8a6d00; }
+  .FALTA { background: #fbdcdc; color: #b3261e; }
+  .FUERA-DE-HORARIO { background: #ffe4c4; color: #a65b00; }
+  .SIN-DATO { background: #eceff1; color: #666; }
+  #cargando { text-align: center; font-size: 13px; color: #666; padding: 10px; display: none; }
+  .pie {
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <!-- Reemplaza el src por la URL real del logo (Cloudinary, o /logo.png si lo subes junto a este archivo en el repo) -->
+  <img class="logo" src="logo.png" alt="Logo del colegio" onerror="this.style.display='none'">
+  <h1>Institución Educativa Pública<br>José Abelardo Quiñones Gonzales</h1>
+  <p>Las Américas, San Juan Bautista - Ayacucho</p>
+  <p>Consulta de Asistencia para Padres de Familia</p>
+</header>
+
+<div class="contenedor">
+
+  <div class="tarjeta" id="tarjeta-info">
+    <h2>Información del colegio</h2>
+    <p style="font-size:13px; line-height:1.5; margin:0;">
+      Institución Educativa Pública José Abelardo Quiñones Gonzales — Las Américas,
+      San Juan Bautista, Ayacucho — turno tarde.<br>
+      Ingrese el <strong>ID</strong> y el <strong>DNI</strong> de su hijo(a) para ver su
+      asistencia (entrada y salida) registrada por el sistema de control con código QR.
+    </p>
+  </div>
+
+  <div class="tarjeta" id="tarjeta-login">
+    <h2>Ingresar</h2>
+    <label for="inputId">ID del estudiante</label>
+    <input type="text" id="inputId" placeholder="Ej: JAQ001">
+
+    <label for="inputDni">DNI del estudiante</label>
+    <input type="text" id="inputDni" placeholder="Ej: 12345678">
+
+    <span class="toggle-rango" onclick="mostrarRango()">Ver un rango de fechas personalizado</span>
+
+    <div id="rango-personalizado">
+      <label for="fechaDesde">Desde</label>
+      <input type="date" id="fechaDesde">
+      <label for="fechaHasta">Hasta</label>
+      <input type="date" id="fechaHasta">
+    </div>
+
+    <button id="btnConsultar" onclick="consultar()">Ver asistencia del mes</button>
+    <div class="mensaje-error" id="mensajeError"></div>
+  </div>
+
+  <div id="cargando">Consultando...</div>
+
+  <div class="tarjeta" id="tarjeta-resultado" style="display:none;">
+    <div class="info-estudiante" id="infoEstudiante"></div>
+    <h2 id="tituloRango">Asistencia</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Entrada</th>
+          <th>Estado</th>
+          <th>Salida</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="cuerpoTabla"></tbody>
+    </table>
+    <button class="secundario" onclick="volver()">Consultar otro rango / estudiante</button>
+  </div>
+
+  <div class="pie">Sistema de Control de Asistencia QR — I.E.P. José Abelardo Quiñones Gonzales</div>
+</div>
+
+<script>
+  // Reemplaza esto por tu WEBAPP_URL real (el mismo que pusiste en la hoja CONFIG)
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwWHo6K5SUOdXR3OKaVzFlryxhqcia2DsknxSy08ralEaBqaEzNO5oEEK4n7oWYZkza/exec";
+
+  function mostrarRango() {
+    var div = document.getElementById("rango-personalizado");
+    div.style.display = (div.style.display === "none" || div.style.display === "") ? "block" : "none";
+  }
+
+  function claseEstado(estado) {
+    if (!estado) return "SIN-DATO";
+    return estado.replace(/\s+/g, "-").replace("Ó","O");
+  }
+
+  function fechaISOaDDMMYYYY(iso) {
+    if (!iso) return "";
+    var p = iso.split("-"); // yyyy-mm-dd
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+
+  function consultar() {
+    var id = document.getElementById("inputId").value.trim();
+    var dni = document.getElementById("inputDni").value.trim();
+    var errorDiv = document.getElementById("mensajeError");
+    errorDiv.style.display = "none";
+
+    if (!id || !dni) {
+      errorDiv.textContent = "Ingrese el ID y el DNI del estudiante.";
+      errorDiv.style.display = "block";
+      return;
+    }
+
+    var desdeISO = document.getElementById("fechaDesde").value;
+    var hastaISO = document.getElementById("fechaHasta").value;
+    var usaRangoPersonalizado = desdeISO && hastaISO;
+
+    var url = WEBAPP_URL + "?accion=consultaPadre&id=" + encodeURIComponent(id) + "&dni=" + encodeURIComponent(dni);
+    if (usaRangoPersonalizado) {
+      url += "&desde=" + encodeURIComponent(fechaISOaDDMMYYYY(desdeISO));
+      url += "&hasta=" + encodeURIComponent(fechaISOaDDMMYYYY(hastaISO));
+    }
+
+    document.getElementById("btnConsultar").disabled = true;
+    document.getElementById("cargando").style.display = "block";
+
+    fetch(url)
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        document.getElementById("cargando").style.display = "none";
+        document.getElementById("btnConsultar").disabled = false;
+
+        if (!data.ok) {
+          errorDiv.textContent = data.mensaje || "No se pudo consultar la asistencia.";
+          errorDiv.style.display = "block";
+          return;
+        }
+        mostrarResultado(data);
+      })
+      .catch(function (err) {
+        document.getElementById("cargando").style.display = "none";
+        document.getElementById("btnConsultar").disabled = false;
+        errorDiv.textContent = "Error de conexión. Intente nuevamente.";
+        errorDiv.style.display = "block";
+      });
+  }
+
+  function mostrarResultado(data) {
+    document.getElementById("tarjeta-login").style.display = "none";
+    document.getElementById("tarjeta-info").style.display = "none";
+    document.getElementById("tarjeta-resultado").style.display = "block";
+
+    document.getElementById("infoEstudiante").innerHTML =
+      "<strong>" + data.estudiante.nombre + "</strong>" +
+      "<span>" + data.estudiante.grado + " \"" + data.estudiante.seccion + "\"</span>";
+
+    document.getElementById("tituloRango").textContent =
+      "Asistencia del " + data.rango.desde + " al " + data.rango.hasta;
+
+    var cuerpo = document.getElementById("cuerpoTabla");
+    cuerpo.innerHTML = "";
+
+    if (data.registros.length === 0) {
+      cuerpo.innerHTML = "<tr><td colspan='5'>No hay registros en este rango de fechas.</td></tr>";
+      return;
+    }
+
+    data.registros.forEach(function (r) {
+      var fila = document.createElement("tr");
+      fila.innerHTML =
+        "<td>" + r.fecha + "</td>" +
+        "<td>" + (r.horaEntrada || "-") + "</td>" +
+        "<td><span class='estado " + claseEstado(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
+        "<td>" + (r.horaSalida || "-") + "</td>" +
+        "<td><span class='estado " + claseEstado(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>";
+      cuerpo.appendChild(fila);
+    });
+  }
+
+  function volver() {
+    document.getElementById("tarjeta-resultado").style.display = "none";
+    document.getElementById("tarjeta-login").style.display = "block";
+    document.getElementById("tarjeta-info").style.display = "block";
+    document.getElementById("mensajeError").style.display = "none";
+  }
+</script>
+
+</body>
+</html>
