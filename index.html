@@ -1,1 +1,378 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#1F3864"/><meta name="description" content="JECKAM_CNEB - Sistema de Planificación Docente MINEDU | Autor: Jose Carlos Huamani Quicañoy"/><link rel="icon" href="/logo.png"/><link rel="apple-touch-icon" href="/logo.png"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/><title>JECKAM_CNEB · Planificación Docente MINEDU</title><script defer="defer" src="/static/js/main.a26df542.js"></script><link href="/static/css/main.494ea398.css" rel="stylesheet"></head><body><noscript>Habilita JavaScript para usar JECKAM_CNEB.</noscript><div id="root"></div></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Escáner de Asistencia - I.E.P. José Abelardo Quiñones Gonzales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #1e3a5f;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+  .pantalla {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; padding: 16px; text-align: center; color: #fff;
+  }
+  header {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(0,0,0,0.15);
+    z-index: 5;
+  }
+  header img { height: 40px; }
+  header h1 { font-size: 15px; margin: 0; line-height: 1.2; }
+  #relojReloj { position: absolute; top: 10px; right: 16px; font-size: 14px; opacity: 0.85; z-index: 5; }
+  #btnCerrarSesion {
+    position: absolute; bottom: 10px; right: 16px; z-index: 5;
+    font-size: 11px; opacity: 0.5; color: #fff; background: none; border: none; cursor: pointer;
+  }
+
+  #vistaCarga { display: flex; }
+  #vistaCarga p { font-size: 15px; opacity: 0.85; }
+
+  /* ---- Login ---- */
+  #vistaLogin { display: none; }
+  #vistaLogin .caja {
+    background: rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 26px 24px;
+    width: 300px;
+    max-width: 85vw;
+  }
+  #vistaLogin h2 { margin: 0 0 16px; font-size: 17px; }
+  #vistaLogin input {
+    width: 100%; padding: 11px; margin-top: 8px;
+    border: none; border-radius: 6px; font-size: 14px;
+  }
+  #vistaLogin button {
+    width: 100%; padding: 12px; margin-top: 16px;
+    border: none; border-radius: 6px;
+    background: #d9a13c; color: #1e3a5f; font-weight: bold; font-size: 15px;
+    cursor: pointer;
+  }
+  #vistaLogin button:disabled { opacity: 0.6; }
+  #errorLogin { color: #ffb3b3; font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  #vistaEscaneo { display: none; }
+  #lector { width: 320px; max-width: 85vw; border-radius: 16px; overflow: hidden; border: 4px solid rgba(255,255,255,0.4); }
+  #vistaEscaneo p.instruccion { margin-top: 20px; font-size: 16px; opacity: 0.9; }
+  #vistaEscaneo p.instruccion strong { display: block; font-size: 20px; margin-bottom: 4px; }
+  #sesionActiva { font-size: 12px; opacity: 0.6; margin-top: 6px; }
+
+  #vistaResultado { display: none; }
+  .icono-resultado {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; margin-bottom: 14px;
+  }
+  .icono-ok { background: #2fa84f; }
+  .icono-tarde { background: #e0a800; }
+  .icono-falta { background: #c0392b; }
+  .icono-error { background: #7f8c8d; }
+
+  #nombreEstudiante { font-size: 24px; font-weight: bold; margin: 6px 0 2px; }
+  #detalleEstudiante { font-size: 15px; opacity: 0.85; margin-bottom: 10px; }
+  #estadoTexto { font-size: 22px; font-weight: bold; padding: 8px 20px; border-radius: 30px; margin-top: 4px; }
+  .fondo-ok { background: rgba(47,168,79,0.25); }
+  .fondo-tarde { background: rgba(224,168,0,0.25); }
+  .fondo-falta { background: rgba(192,57,43,0.25); }
+  .fondo-error { background: rgba(127,140,141,0.25); }
+
+  #mensajeExtra { font-size: 14px; margin-top: 10px; opacity: 0.85; max-width: 300px; }
+  #contadorReset { font-size: 12px; opacity: 0.6; margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+  <h1>I.E.P. José Abelardo Quiñones Gonzales<br>Registro de Asistencia QR</h1>
+</header>
+<div id="relojReloj"></div>
+
+<div class="pantalla" id="vistaCarga">
+  <p>Cargando...</p>
+</div>
+
+<!-- ---- LOGIN (solo ADMIN puede operar el escáner) ---- -->
+<div class="pantalla" id="vistaLogin">
+  <div class="caja">
+    <h2>Iniciar sesión para escanear</h2>
+    <input type="text" id="loginNombre" placeholder="Nombre completo (usuario)">
+    <input type="text" id="loginDni" placeholder="DNI (clave)">
+    <button id="btnLogin" onclick="intentarLogin()">Ingresar</button>
+    <div id="errorLogin"></div>
+  </div>
+</div>
+
+<div class="pantalla" id="vistaEscaneo">
+  <div id="lector"></div>
+  <p class="instruccion"><strong>Acerca tu carnet a la cámara</strong>Escaneo automático de entrada / salida</p>
+  <div id="sesionActiva"></div>
+</div>
+
+<div class="pantalla" id="vistaResultado">
+  <div class="icono-resultado" id="iconoResultado">✔</div>
+  <div id="nombreEstudiante">—</div>
+  <div id="detalleEstudiante">—</div>
+  <div id="estadoTexto">—</div>
+  <div id="mensajeExtra"></div>
+  <div id="contadorReset">Volviendo al escáner...</div>
+</div>
+
+<button id="btnCerrarSesion" onclick="cerrarSesion()">Cerrar sesión</button>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwWHo6K5SUOdXR3OKaVzFlryxhqcia2DsknxSy08ralEaBqaEzNO5oEEK4n7oWYZkza/exec";
+
+  var procesando = false;
+  var html5QrcodeScanner;
+  var CFG = null;
+  var USUARIO_ACTIVO = null;
+
+  // ---------- Utilidades de hora local ----------
+  function minutosDesdeTexto(txt) { var p = txt.split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+  function horaActualMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+  function horaActualTexto() {
+    var d = new Date();
+    return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+  }
+  function fechaHoyClave() { var d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+
+  // ---------- Sesión (ADMIN) ----------
+  function guardarSesion(usuario) {
+    sessionStorage.setItem("sesionAdmin", JSON.stringify(usuario));
+  }
+  function leerSesion() {
+    var s = sessionStorage.getItem("sesionAdmin");
+    return s ? JSON.parse(s) : null;
+  }
+  function cerrarSesion() {
+    sessionStorage.removeItem("sesionAdmin");
+    if (html5QrcodeScanner) { html5QrcodeScanner.stop().catch(function(){}); }
+    location.reload();
+  }
+
+  function intentarLogin() {
+    var nombre = document.getElementById("loginNombre").value.trim();
+    var dni = document.getElementById("loginDni").value.trim();
+    var err = document.getElementById("errorLogin");
+    err.textContent = "";
+
+    if (!nombre || !dni) { err.textContent = "Ingrese usuario y DNI."; return; }
+
+    document.getElementById("btnLogin").disabled = true;
+    fetch(WEBAPP_URL + "?accion=login&nombre=" + encodeURIComponent(nombre) + "&dni=" + encodeURIComponent(dni))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        document.getElementById("btnLogin").disabled = false;
+        if (!data.ok) {
+          err.textContent = data.mensaje || "Usuario o clave incorrectos.";
+          return;
+        }
+        if (data.usuario.rol !== "ADMIN") {
+          err.textContent = "Solo el personal ADMIN puede operar el escáner.";
+          return;
+        }
+        USUARIO_ACTIVO = data.usuario;
+        guardarSesion(USUARIO_ACTIVO);
+        cargarConfig();
+      })
+      .catch(function () {
+        document.getElementById("btnLogin").disabled = false;
+        err.textContent = "Error de conexión. Intente nuevamente.";
+      });
+  }
+
+  // ---------- Registro local del día (ENTRADA/SALIDA sin esperar al servidor) ----------
+  function getRegistrosHoy() {
+    var clave = "asistencia_" + fechaHoyClave();
+    var datos = localStorage.getItem(clave);
+    return datos ? JSON.parse(datos) : {};
+  }
+  function guardarRegistroHoy(idQR, tipo) {
+    var clave = "asistencia_" + fechaHoyClave();
+    var registros = getRegistrosHoy();
+    registros[idQR] = registros[idQR] || {};
+    registros[idQR][tipo] = true;
+    localStorage.setItem(clave, JSON.stringify(registros));
+  }
+
+  // ---------- CONFIG (una sola vez por sesión) ----------
+  function cargarConfig() {
+    document.getElementById("vistaLogin").style.display = "none";
+    document.getElementById("vistaCarga").style.display = "flex";
+
+    fetch(WEBAPP_URL + "?accion=obtenerConfigPublica")
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        CFG = data.ok ? data.config : configPorDefecto();
+        mostrarPantallaEscaneo();
+      })
+      .catch(function () {
+        CFG = configPorDefecto();
+        mostrarPantallaEscaneo();
+      });
+  }
+  function configPorDefecto() {
+    return { HORA_PUNTUAL_HASTA: "12:43", HORA_TARDE_HASTA: "13:59",
+             HORA_SALIDA_DESDE: "18:16", HORA_SALIDA_HASTA: "18:45" };
+  }
+
+  function mostrarPantallaEscaneo() {
+    document.getElementById("vistaCarga").style.display = "none";
+    document.getElementById("vistaEscaneo").style.display = "flex";
+    document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
+    iniciarEscaner();
+  }
+
+  function actualizarReloj() {
+    var ahora = new Date();
+    document.getElementById("relojReloj").textContent =
+      ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  setInterval(actualizarReloj, 1000);
+  actualizarReloj();
+
+  // ---------- Cámara ----------
+  function iniciarEscaner() {
+    html5QrcodeScanner = new Html5Qrcode("lector");
+    var config = {
+      fps: 20,
+      qrbox: function (w, h) { return { width: Math.floor(w * 0.85), height: Math.floor(h * 0.85) }; },
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    };
+
+    html5QrcodeScanner.start({ facingMode: "user" }, config, onEscaneoExitoso, function () {})
+      .catch(function () {
+        Html5Qrcode.getCameras().then(function (camaras) {
+          if (camaras && camaras.length) {
+            html5QrcodeScanner.start(camaras[0].id, config, onEscaneoExitoso, function () {});
+          }
+        });
+      });
+  }
+
+  function onEscaneoExitoso(idDetectado) {
+    if (procesando) return;
+    procesando = true;
+    html5QrcodeScanner.pause(true);
+    procesarLocalmente(idDetectado.trim().toUpperCase());
+  }
+
+  // ---------- Lógica local (INMEDIATA) ----------
+  function procesarLocalmente(idQR) {
+    var registrosHoy = getRegistrosHoy();
+    var yaTieneEntrada = registrosHoy[idQR] && registrosHoy[idQR]["ENTRADA"];
+    var yaTieneSalida = registrosHoy[idQR] && registrosHoy[idQR]["SALIDA"];
+    var minActual = horaActualMin();
+    var horaTxt = horaActualTexto();
+
+    if (yaTieneSalida) {
+      mostrarResultado({ ok: false, mensaje: "Ya registraste tu entrada y salida hoy." });
+      return;
+    }
+
+    if (!yaTieneEntrada) {
+      var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
+      var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
+      var estado = (minActual <= puntualHasta) ? "PUNTUAL" : (minActual <= tardeHasta) ? "TARDE" : "FALTA";
+
+      guardarRegistroHoy(idQR, "ENTRADA");
+      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, idQR: idQR, hora: horaTxt });
+      enviarAlServidorEnSegundoPlano(idQR);
+    } else {
+      var salidaDesde = minutosDesdeTexto(CFG.HORA_SALIDA_DESDE);
+      var salidaHasta = minutosDesdeTexto(CFG.HORA_SALIDA_HASTA);
+
+      if (minActual < salidaDesde) {
+        mostrarResultado({ ok: false, mensaje: "AÚN NO TERMINÓ TUS CLASES" });
+        return;
+      }
+      var estadoSalida = (minActual <= salidaHasta) ? "SALIDA OK" : "FUERA DE HORARIO";
+      guardarRegistroHoy(idQR, "SALIDA");
+      mostrarResultado({ ok: true, tipo: "SALIDA", estado: estadoSalida, idQR: idQR, hora: horaTxt });
+      enviarAlServidorEnSegundoPlano(idQR);
+    }
+  }
+
+  function enviarAlServidorEnSegundoPlano(idQR) {
+    fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR)).catch(function () {});
+  }
+
+  function claseEstado(estado) {
+    if (estado === "PUNTUAL" || estado === "SALIDA OK") return "ok";
+    if (estado === "TARDE") return "tarde";
+    if (estado === "FALTA" || estado === "FUERA DE HORARIO") return "falta";
+    return "error";
+  }
+
+  function mostrarResultado(data) {
+    document.getElementById("vistaEscaneo").style.display = "none";
+    document.getElementById("vistaResultado").style.display = "flex";
+
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    var detalleDiv = document.getElementById("detalleEstudiante");
+    var extraDiv = document.getElementById("mensajeExtra");
+
+    icono.className = "icono-resultado";
+    estadoDiv.className = "";
+    extraDiv.textContent = "";
+
+    if (!data.ok) {
+      icono.classList.add("icono-falta");
+      icono.textContent = "✖";
+      nombreDiv.textContent = "No se pudo registrar";
+      detalleDiv.textContent = "";
+      estadoDiv.classList.add("fondo-falta");
+      estadoDiv.textContent = data.mensaje || "Error desconocido";
+    } else {
+      var cls = claseEstado(data.estado);
+      icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
+      icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
+
+      nombreDiv.textContent = data.idQR;
+      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA — " : "Registro de SALIDA — ") + data.hora;
+
+      estadoDiv.classList.add("fondo-" + cls);
+      estadoDiv.textContent = data.estado;
+    }
+
+    var segundos = 3;
+    var contador = document.getElementById("contadorReset");
+    var intervalo = setInterval(function () {
+      segundos--;
+      contador.textContent = "Volviendo al escáner en " + segundos + "...";
+      if (segundos <= 0) { clearInterval(intervalo); volverAEscanear(); }
+    }, 1000);
+  }
+
+  function volverAEscanear() {
+    document.getElementById("vistaResultado").style.display = "none";
+    document.getElementById("vistaEscaneo").style.display = "flex";
+    procesando = false;
+    html5QrcodeScanner.resume();
+  }
+
+  // ---------- Arranque ----------
+  window.onload = function () {
+    var sesion = leerSesion();
+    document.getElementById("vistaCarga").style.display = "none";
+    if (sesion) {
+      USUARIO_ACTIVO = sesion;
+      cargarConfig();
+    } else {
+      document.getElementById("vistaLogin").style.display = "flex";
+    }
+  };
+</script>
+
+</body>
+</html>
