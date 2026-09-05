@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Gestión - I.E.P. José Abelardo Quiñones Gonzales</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+    color: #222;
+  }
+  header {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header .titulo { display: flex; align-items: center; gap: 10px; }
+  header img { height: 40px; }
+  header h1 { font-size: 15px; margin: 0; line-height: 1.2; }
+  header .sesion { font-size: 12px; opacity: 0.85; text-align: right; }
+  header button {
+    background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer; margin-left: 8px;
+  }
+
+  #vistaLogin {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 80vh; padding: 16px;
+  }
+  #vistaLogin .caja {
+    background: #fff; border-radius: 12px; padding: 26px 24px; width: 320px; max-width: 90vw;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  #vistaLogin h2 { margin: 0 0 16px; font-size: 18px; color: #1e3a5f; }
+  #vistaLogin input {
+    width: 100%; padding: 11px; margin-top: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+  }
+  #vistaLogin button {
+    width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px;
+    background: #1e3a5f; color: #fff; font-weight: bold; font-size: 15px; cursor: pointer;
+  }
+  #errorLogin { color: #b3261e; font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  #vistaPanel { display: none; }
+  nav.tabs {
+    display: flex; overflow-x: auto; background: #fff; border-bottom: 1px solid #ddd;
+  }
+  nav.tabs button {
+    flex: 1; min-width: 140px; padding: 12px 8px; border: none; background: none; cursor: pointer;
+    font-size: 13px; font-weight: bold; color: #666; border-bottom: 3px solid transparent;
+  }
+  nav.tabs button.activa { color: #1e3a5f; border-bottom-color: #d9a13c; }
+
+  .contenido-tab { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
+  .contenido-tab.activa { display: block; }
+
+  .fila-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 16px; }
+  .campo { display: flex; flex-direction: column; font-size: 12px; color: #555; }
+  .campo input, .campo select {
+    padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-top: 4px;
+  }
+  .btn-primario {
+    padding: 10px 18px; border: none; border-radius: 6px; background: #1e3a5f; color: #fff;
+    font-weight: bold; cursor: pointer; font-size: 14px; height: fit-content;
+  }
+  .btn-primario:disabled { opacity: 0.6; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+  th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #eee; }
+  th { background: #eef1f5; color: #444; font-size: 12px; }
+  .estado { padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 11px; display: inline-block; }
+  .e-PUNTUAL, .e-SALIDA-OK { background: #d9f2df; color: #1a7a3a; }
+  .e-TARDE { background: #fff3cd; color: #8a6d00; }
+  .e-FALTA { background: #fbdcdc; color: #b3261e; }
+  .e-FUERA-DE-HORARIO { background: #ffe4c4; color: #a65b00; }
+  .e-SIN-REGISTRO, .e-NO-REGISTRO-SALIDA { background: #eceff1; color: #666; }
+
+  .mensaje-ok { background: #d9f2df; color: #1a7a3a; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
+  .mensaje-error { background: #fdecea; color: #b3261e; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
+
+  .tarjetas-stats { display: flex; flex-wrap: wrap; gap: 12px; }
+  .tarjeta-stat {
+    background: #fff; border-radius: 10px; padding: 16px 20px; min-width: 140px; flex: 1;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center;
+  }
+  .tarjeta-stat .numero { font-size: 28px; font-weight: bold; color: #1e3a5f; }
+  .tarjeta-stat .etiqueta { font-size: 12px; color: #666; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titulo">
+    <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+    <h1>Panel de Gestión<br>I.E.P. José Abelardo Quiñones Gonzales</h1>
+  </div>
+  <div class="sesion" id="infoSesion" style="display:none;">
+    <span id="textoSesion"></span>
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+</header>
+
+<div id="vistaLogin">
+  <div class="caja">
+    <h2>Iniciar sesión</h2>
+    <input type="text" id="loginNombre" placeholder="Nombre completo (usuario)">
+    <input type="text" id="loginDni" placeholder="DNI (clave)">
+    <button id="btnLogin" onclick="intentarLogin()">Ingresar</button>
+    <div id="errorLogin"></div>
+  </div>
+</div>
+
+<div id="vistaPanel">
+  <nav class="tabs">
+    <button class="tab-btn activa" data-tab="tabAula" onclick="cambiarTab('tabAula')">Asistencia por Aula</button>
+    <button class="tab-btn" data-tab="tabJustificar" onclick="cambiarTab('tabJustificar')">Justificaciones</button>
+    <button class="tab-btn" data-tab="tabReportes" onclick="cambiarTab('tabReportes')">Reportes</button>
+    <button class="tab-btn" data-tab="tabStats" onclick="cambiarTab('tabStats')">Estadísticas</button>
+  </nav>
+
+  <!-- TAB 1: ASISTENCIA POR AULA -->
+  <div id="tabAula" class="contenido-tab activa">
+    <div class="fila-filtros">
+      <div class="campo"><label>Fecha</label><input type="date" id="aulaFecha"></div>
+      <div class="campo"><label>Grado</label>
+        <select id="aulaGrado">
+          <option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option>
+        </select>
+      </div>
+      <div class="campo"><label>Sección</label>
+        <select id="aulaSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </div>
+      <button class="btn-primario" onclick="consultarAula()">Consultar</button>
+    </div>
+    <div id="aulaResultado"></div>
+  </div>
+
+  <!-- TAB 2: JUSTIFICACIONES -->
+  <div id="tabJustificar" class="contenido-tab">
+    <div class="fila-filtros">
+      <div class="campo"><label>ID del estudiante</label><input type="text" id="justId" placeholder="Ej: JAQ001"></div>
+      <div class="campo"><label>Fecha a justificar</label><input type="date" id="justFecha"></div>
+    </div>
+    <div class="campo" style="max-width:500px;">
+      <label>Motivo</label>
+      <textarea id="justMotivo" rows="3" style="padding:9px; border:1px solid #ccc; border-radius:6px; font-size:14px;" placeholder="Ej: Cita médica, con constancia presentada."></textarea>
+    </div>
+    <button class="btn-primario" style="margin-top:12px;" onclick="registrarJustificacionUI()">Guardar justificación</button>
+    <div id="justResultado"></div>
+  </div>
+
+  <!-- TAB 3: REPORTES -->
+  <div id="tabReportes" class="contenido-tab">
+    <div class="fila-filtros">
+      <div class="campo"><label>ID del estudiante</label><input type="text" id="repId" placeholder="Ej: JAQ001"></div>
+      <div class="campo"><label>Desde</label><input type="date" id="repDesde"></div>
+      <div class="campo"><label>Hasta</label><input type="date" id="repHasta"></div>
+      <button class="btn-primario" onclick="consultarReporte()">Ver reporte</button>
+    </div>
+    <div id="repResultado"></div>
+  </div>
+
+  <!-- TAB 4: ESTADÍSTICAS -->
+  <div id="tabStats" class="contenido-tab">
+    <div class="fila-filtros">
+      <div class="campo"><label>Fecha</label><input type="date" id="statsFecha"></div>
+      <button class="btn-primario" onclick="consultarStats()">Ver estadísticas</button>
+    </div>
+    <div id="statsResultado"></div>
+  </div>
+</div>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwbFz2SlvxX-gbRIf9pjTBkgw4qZLZLwLicssIAKWYROEZqkDXaIguMiyXy3MkjsddC/exec";
+  var USUARIO_ACTIVO = null;
+
+  function fechaHoyISO() {
+    var d = new Date();
+    var mes = String(d.getMonth() + 1).padStart(2, "0");
+    var dia = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + mes + "-" + dia;
+  }
+  function isoADDMMYYYY(iso) {
+    if (!iso) return "";
+    var p = iso.split("-");
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+  function claseCss(estado) {
+    return "e-" + String(estado || "").replace(/\s+/g, "-").replace("Ó", "O");
+  }
+
+  // ---------- Login ----------
+  function guardarSesion(u) { sessionStorage.setItem("sesionApp1", JSON.stringify(u)); }
+  function leerSesion() { var s = sessionStorage.getItem("sesionApp1"); return s ? JSON.parse(s) : null; }
+  function cerrarSesion() { sessionStorage.removeItem("sesionApp1"); location.reload(); }
+
+  function intentarLogin() {
+    var nombre = document.getElementById("loginNombre").value.trim();
+    var dni = document.getElementById("loginDni").value.trim();
+    var err = document.getElementById("errorLogin");
+    err.textContent = "";
+    if (!nombre || !dni) { err.textContent = "Ingrese usuario y DNI."; return; }
+
+    document.getElementById("btnLogin").disabled = true;
+    fetch(WEBAPP_URL + "?accion=login&nombre=" + encodeURIComponent(nombre) + "&dni=" + encodeURIComponent(dni))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        document.getElementById("btnLogin").disabled = false;
+        if (!data.ok) { err.textContent = data.mensaje || "Usuario o clave incorrectos."; return; }
+        USUARIO_ACTIVO = data.usuario;
+        guardarSesion(USUARIO_ACTIVO);
+        mostrarPanel();
+      })
+      .catch(function () {
+        document.getElementById("btnLogin").disabled = false;
+        err.textContent = "Error de conexión.";
+      });
+  }
+
+  function mostrarPanel() {
+    document.getElementById("vistaLogin").style.display = "none";
+    document.getElementById("vistaPanel").style.display = "block";
+    document.getElementById("infoSesion").style.display = "block";
+    document.getElementById("textoSesion").textContent =
+      USUARIO_ACTIVO.nombre + " (" + USUARIO_ACTIVO.rol + (USUARIO_ACTIVO.rol === "TUTOR" ? " - " + USUARIO_ACTIVO.seccionAsignada : "") + ")";
+
+    // Fechas por defecto: hoy
+    ["aulaFecha", "justFecha", "repDesde", "repHasta", "statsFecha"].forEach(function (id) {
+      document.getElementById(id).value = fechaHoyISO();
+    });
+
+    // Si es TUTOR, restringe grado/sección a la suya propia
+    if (USUARIO_ACTIVO.rol === "TUTOR" && USUARIO_ACTIVO.seccionAsignada) {
+      var partes = USUARIO_ACTIVO.seccionAsignada.trim().split(" ");
+      var seccion = partes.pop();
+      var grado = partes.join(" ");
+      var selGrado = document.getElementById("aulaGrado");
+      var selSeccion = document.getElementById("aulaSeccion");
+      selGrado.value = grado; selGrado.disabled = true;
+      selSeccion.value = seccion; selSeccion.disabled = true;
+    }
+  }
+
+  function cambiarTab(id) {
+    document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.toggle("activa", b.dataset.tab === id); });
+    document.querySelectorAll(".contenido-tab").forEach(function (t) { t.classList.toggle("activa", t.id === id); });
+  }
+
+  // ---------- TAB 1: Asistencia por Aula ----------
+  function consultarAula() {
+    var fecha = isoADDMMYYYY(document.getElementById("aulaFecha").value);
+    var grado = document.getElementById("aulaGrado").value;
+    var seccion = document.getElementById("aulaSeccion").value;
+    var div = document.getElementById("aulaResultado");
+    div.innerHTML = "Cargando...";
+
+    fetch(WEBAPP_URL + "?accion=asistenciaDia&fecha=" + encodeURIComponent(fecha) + "&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        if (data.estudiantes.length === 0) { div.innerHTML = "<p>No hay estudiantes activos en esa sección.</p>"; return; }
+
+        var html = "<table><thead><tr><th>ID</th><th>Nombre</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th></tr></thead><tbody>";
+        data.estudiantes.forEach(function (e) {
+          html += "<tr><td>" + e.id + "</td><td style='text-align:left;'>" + e.nombre + "</td>" +
+            "<td>" + (e.horaEntrada || "-") + "</td><td><span class='estado " + claseCss(e.estadoEntrada) + "'>" + e.estadoEntrada + "</span></td>" +
+            "<td>" + (e.horaSalida || "-") + "</td><td><span class='estado " + claseCss(e.estadoSalida) + "'>" + e.estadoSalida + "</span></td></tr>";
+        });
+        html += "</tbody></table>";
+        div.innerHTML = html;
+      })
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  // ---------- TAB 2: Justificaciones ----------
+  function registrarJustificacionUI() {
+    var id = document.getElementById("justId").value.trim();
+    var fecha = isoADDMMYYYY(document.getElementById("justFecha").value);
+    var motivo = document.getElementById("justMotivo").value.trim();
+    var div = document.getElementById("justResultado");
+    div.innerHTML = "";
+
+    if (!id || !motivo) { div.innerHTML = "<div class='mensaje-error'>Complete el ID y el motivo.</div>"; return; }
+
+    var url = WEBAPP_URL + "?accion=justificar&id=" + encodeURIComponent(id) + "&fecha=" + encodeURIComponent(fecha) +
+      "&motivo=" + encodeURIComponent(motivo) + "&usuario=" + encodeURIComponent(USUARIO_ACTIVO.nombre);
+
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      div.innerHTML = "<div class='" + (data.ok ? "mensaje-ok" : "mensaje-error") + "'>" + (data.mensaje || "") + "</div>";
+      if (data.ok) {
+        document.getElementById("justId").value = "";
+        document.getElementById("justMotivo").value = "";
+      }
+    }).catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  // ---------- TAB 3: Reportes ----------
+  function consultarReporte() {
+    var id = document.getElementById("repId").value.trim();
+    var desde = isoADDMMYYYY(document.getElementById("repDesde").value);
+    var hasta = isoADDMMYYYY(document.getElementById("repHasta").value);
+    var div = document.getElementById("repResultado");
+    div.innerHTML = "Cargando...";
+
+    if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
+
+    fetch(WEBAPP_URL + "?accion=reporteEstudiante&id=" + encodeURIComponent(id) + "&desde=" + encodeURIComponent(desde) + "&hasta=" + encodeURIComponent(hasta))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+
+        var html = "<p><strong>" + data.estudiante.nombre + "</strong> — " + data.estudiante.grado + " \"" + data.estudiante.seccion + "\"</p>";
+        if (data.registros.length === 0) { html += "<p>No hay registros en ese rango.</p>"; div.innerHTML = html; return; }
+
+        html += "<table><thead><tr><th>Fecha</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th><th>Justificado por</th></tr></thead><tbody>";
+        data.registros.forEach(function (r) {
+          html += "<tr><td>" + r.fecha + "</td><td>" + (r.horaEntrada || "-") + "</td>" +
+            "<td><span class='estado " + claseCss(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
+            "<td>" + (r.horaSalida || "-") + "</td><td><span class='estado " + claseCss(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>" +
+            "<td>" + (r.justificadoPor || "-") + "</td></tr>";
+        });
+        html += "</tbody></table>";
+        div.innerHTML = html;
+      })
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  // ---------- TAB 4: Estadísticas ----------
+  function consultarStats() {
+    var fecha = isoADDMMYYYY(document.getElementById("statsFecha").value);
+    var div = document.getElementById("statsResultado");
+    div.innerHTML = "Cargando...";
+
+    var grado = null, seccion = null;
+    if (USUARIO_ACTIVO.rol === "TUTOR" && USUARIO_ACTIVO.seccionAsignada) {
+      var partes = USUARIO_ACTIVO.seccionAsignada.trim().split(" ");
+      seccion = partes.pop();
+      grado = partes.join(" ");
+    }
+
+    var url = WEBAPP_URL + "?accion=estadisticasDia&fecha=" + encodeURIComponent(fecha);
+    if (grado) url += "&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion);
+
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+      var c = data.conteo;
+      var html = "<div class='tarjetas-stats'>";
+      var etiquetas = [
+        ["PUNTUAL", "Puntual"], ["TARDE", "Tarde"], ["FALTA", "Falta"],
+        ["SALIDA OK", "Salida OK"], ["FUERA DE HORARIO", "Fuera de horario"], ["NO REGISTRÓ SALIDA", "No registró salida"]
+      ];
+      etiquetas.forEach(function (e) {
+        html += "<div class='tarjeta-stat'><div class='numero'>" + (c[e[0]] || 0) + "</div><div class='etiqueta'>" + e[1] + "</div></div>";
+      });
+      html += "</div>";
+      div.innerHTML = html;
+    }).catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  // ---------- Arranque ----------
+  window.onload = function () {
+    var sesion = leerSesion();
+    if (sesion) { USUARIO_ACTIVO = sesion; mostrarPanel(); }
+  };
+</script>
+
+</body>
+</html>
