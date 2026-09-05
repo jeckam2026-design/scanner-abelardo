@@ -255,28 +255,34 @@
     var idQR = idDetectado.trim().toUpperCase();
     if (idQR === ultimoIdMostrado) return; // evita doble lectura del mismo carnet sin moverlo
     procesando = true;
+    ultimoIdMostrado = idQR;
 
-    // Confirmación INMEDIATA en pantalla (sin esperar al servidor) — solo confirma que se leyó
-    mostrarConfirmacionRapida(idQR);
+    // Muestra "Verificando..." al instante mientras espera la respuesta real del servidor
+    mostrarVerificando(idQR);
 
-    // Se manda a registrar en segundo plano, sin bloquear el siguiente escaneo.
-    // Cualquier duplicado o inconsistencia lo resuelve el trigger de limpieza nocturno.
     fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
       .then(function (res) { return res.json(); })
       .then(function (data) {
         document.getElementById("debugInfo").textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
+        mostrarResultadoReal(idQR, data);
       })
       .catch(function (err) {
         document.getElementById("debugInfo").textContent = "ERROR DE RED (" + idQR + "): " + err.message;
+        mostrarResultadoReal(idQR, { ok: false, mensaje: "Error de conexión" });
       });
   }
 
   var ultimoIdMostrado = null;
   var timeoutResumen = null;
 
-  // Muestra una confirmación breve de que el QR se leyó, y vuelve a escanear casi al instante
-  function mostrarConfirmacionRapida(idQR) {
-    ultimoIdMostrado = idQR;
+  function claseEstado(estado) {
+    if (estado === "PUNTUAL" || estado === "SALIDA OK") return "ok";
+    if (estado === "TARDE") return "tarde";
+    if (estado === "FALTA" || estado === "FUERA DE HORARIO") return "falta";
+    return "error";
+  }
+
+  function mostrarVerificando(idQR) {
     document.getElementById("vistaEscaneo").style.display = "none";
     document.getElementById("vistaResultado").style.display = "flex";
 
@@ -285,16 +291,43 @@
     var nombreDiv = document.getElementById("nombreEstudiante");
     var detalleDiv = document.getElementById("detalleEstudiante");
 
-    icono.className = "icono-resultado icono-ok";
-    icono.textContent = "✔";
+    icono.className = "icono-resultado icono-error";
+    icono.textContent = "…";
     nombreDiv.textContent = idQR;
-    detalleDiv.textContent = "Registrando...";
-    estadoDiv.className = "fondo-ok";
-    estadoDiv.textContent = "LEÍDO";
-
+    detalleDiv.textContent = "Verificando...";
+    estadoDiv.className = "fondo-error";
+    estadoDiv.textContent = "";
     document.getElementById("contadorReset").textContent = "";
+  }
+
+  // Muestra el estado REAL que devolvió el servidor (PUNTUAL/TARDE/FALTA/SALIDA OK/FUERA DE HORARIO/rechazo)
+  function mostrarResultadoReal(idQR, data) {
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    var detalleDiv = document.getElementById("detalleEstudiante");
+
+    icono.className = "icono-resultado";
+    estadoDiv.className = "";
+    nombreDiv.textContent = idQR;
+
+    if (!data.ok) {
+      icono.classList.add("icono-falta");
+      icono.textContent = "✖";
+      detalleDiv.textContent = "No se pudo registrar";
+      estadoDiv.classList.add("fondo-falta");
+      estadoDiv.textContent = data.mensaje || "Error desconocido";
+    } else {
+      var cls = claseEstado(data.estado);
+      icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
+      icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
+      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA");
+      estadoDiv.classList.add("fondo-" + cls);
+      estadoDiv.textContent = data.estado;
+    }
+
     if (timeoutResumen) clearTimeout(timeoutResumen);
-    timeoutResumen = setTimeout(volverAEscanear, 500); // vuelve casi de inmediato
+    timeoutResumen = setTimeout(volverAEscanear, 1000); // se lee rápido pero se alcanza a ver el estado real
   }
 
   function volverAEscanear() {
