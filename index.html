@@ -115,6 +115,8 @@
   <div id="lector"></div>
   <p class="instruccion"><strong>Acerca tu carnet a la cámara</strong>Escaneo automático de entrada / salida</p>
   <div id="sesionActiva"></div>
+  <div id="debugInfo" style="font-size:11px; opacity:0.55; margin-top:10px; max-width:300px;"></div>
+  <button onclick="reiniciarDia()" style="margin-top:14px; font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:rgba(255,255,255,0.15); color:#fff; cursor:pointer;">Reiniciar registros de hoy (esta tablet)</button>
 </div>
 
 <div class="pantalla" id="vistaResultado">
@@ -229,7 +231,21 @@
     document.getElementById("vistaCarga").style.display = "none";
     document.getElementById("vistaEscaneo").style.display = "flex";
     document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
+    document.getElementById("debugInfo").textContent =
+      "CONFIG cargado: PUNTUAL hasta " + CFG.HORA_PUNTUAL_HASTA +
+      " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
+      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA +
+      " | Hoy registrados: " + JSON.stringify(getRegistrosHoy());
     iniciarEscaner();
+  }
+
+  function reiniciarDia() {
+    localStorage.removeItem("asistencia_" + fechaHoyClave());
+    document.getElementById("debugInfo").textContent =
+      "Registros de hoy borrados. CONFIG: PUNTUAL hasta " + CFG.HORA_PUNTUAL_HASTA +
+      " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
+      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA;
+    alert("Listo, se borraron los registros de hoy en esta tablet.");
   }
 
   function actualizarReloj() {
@@ -273,6 +289,11 @@
     var yaTieneSalida = registrosHoy[idQR] && registrosHoy[idQR]["SALIDA"];
     var minActual = horaActualMin();
     var horaTxt = horaActualTexto();
+
+    document.getElementById("debugInfo").textContent =
+      "Escaneado: " + idQR + " | yaTieneEntrada: " + (!!yaTieneEntrada) +
+      " | yaTieneSalida: " + (!!yaTieneSalida) + " | hora local: " + horaTxt +
+      " | registrosHoy[" + idQR + "]: " + JSON.stringify(registrosHoy[idQR] || {});
 
     if (yaTieneSalida) {
       mostrarResultado({ ok: false, mensaje: "Ya registraste tu entrada y salida hoy." });
