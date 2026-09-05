@@ -240,7 +240,7 @@
       });
   }
   function configPorDefecto() {
-    return { HORA_PUNTUAL_HASTA: "12:43", HORA_TARDE_HASTA: "13:59",
+    return { HORA_PUNTUAL_DESDE: "00:00", HORA_PUNTUAL_HASTA: "12:43", HORA_TARDE_HASTA: "13:59",
              HORA_SALIDA_DESDE: "18:16", HORA_SALIDA_HASTA: "18:45" };
   }
 
@@ -249,7 +249,7 @@
     document.getElementById("vistaEscaneo").style.display = "flex";
     document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
     document.getElementById("debugInfo").textContent =
-      "CONFIG cargado: PUNTUAL hasta " + CFG.HORA_PUNTUAL_HASTA +
+      "CONFIG cargado: PUNTUAL " + CFG.HORA_PUNTUAL_DESDE + "-" + CFG.HORA_PUNTUAL_HASTA +
       " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
       " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA +
       " | Hoy registrados: " + JSON.stringify(getRegistrosHoy());
@@ -321,6 +321,11 @@
     }
 
     if (!yaTieneEntrada) {
+      var puntualDesde = minutosDesdeTexto(CFG.HORA_PUNTUAL_DESDE);
+      if (minActual < puntualDesde) {
+        mostrarResultado({ ok: false, mensaje: "AÚN NO ES HORA DE INGRESAR" });
+        return;
+      }
       var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
       var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
       var estado = (minActual <= puntualHasta) ? "PUNTUAL" : (minActual <= tardeHasta) ? "TARDE" : "FALTA";
@@ -355,23 +360,49 @@
       })
       .then(function (data) {
         if (dbg) dbg.textContent += " | Respuesta servidor: " + JSON.stringify(data);
-        if (data.ok && data.estado && data.estado !== estadoMostrado) {
-          corregirEstadoEnPantalla(idQR, data.estado);
+        if (data.ok && data.tipo) {
+          // El servidor es la fuente de verdad: sincroniza la memoria local a lo que
+          // realmente quedó registrado, sin importar lo que la tablet había supuesto.
+          if (data.tipo !== tipoEsperado) {
+            deshacerRegistroLocal(idQR, tipoEsperado); // borra la marca optimista equivocada
+          }
+          guardarRegistroHoy(idQR, data.tipo);
+          if (data.tipo !== tipoEsperado || data.estado !== estadoMostrado) {
+            corregirEstadoEnPantalla(idQR, data.estado, data.tipo);
+          }
+        } else if (!data.ok) {
+          // El servidor rechazó el registro (ej. "ya registraste entrada y salida hoy").
+          // Deshace la marca local que se había puesto de forma optimista, para no quedar
+          // desincronizados: el próximo escaneo debe reintentar desde el mismo punto.
+          deshacerRegistroLocal(idQR, tipoEsperado);
         }
       })
       .catch(function (err) {
         if (dbg) dbg.textContent += " | ERROR DE RED: " + err.message;
+        // Sin confirmación del servidor, deshacemos la marca local optimista para
+        // que el próximo escaneo reintente en vez de quedar desincronizado.
+        deshacerRegistroLocal(idQR, tipoEsperado);
       });
   }
 
+  function deshacerRegistroLocal(idQR, tipo) {
+    var clave = "asistencia_" + fechaHoyClave();
+    var registros = getRegistrosHoy();
+    if (registros[idQR]) {
+      delete registros[idQR][tipo];
+      localStorage.setItem(clave, JSON.stringify(registros));
+    }
+  }
+
   // Si la pantalla de resultado sigue mostrando este mismo estudiante, actualiza el estado visible
-  function corregirEstadoEnPantalla(idQR, estadoReal) {
+  function corregirEstadoEnPantalla(idQR, estadoReal, tipoReal) {
     var nombreDiv = document.getElementById("nombreEstudiante");
     if (document.getElementById("vistaResultado").style.display !== "flex") return;
     if (!nombreDiv || nombreDiv.textContent !== idQR) return; // ya se fue a otro escaneo
 
     var icono = document.getElementById("iconoResultado");
     var estadoDiv = document.getElementById("estadoTexto");
+    var detalleDiv = document.getElementById("detalleEstudiante");
     var cls = claseEstado(estadoReal);
 
     icono.className = "icono-resultado";
@@ -381,6 +412,10 @@
     estadoDiv.className = "";
     estadoDiv.classList.add("fondo-" + cls);
     estadoDiv.textContent = estadoReal + " (corregido)";
+
+    if (tipoReal && detalleDiv) {
+      detalleDiv.textContent = (tipoReal === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA") + " (corregido por el servidor)";
+    }
   }
 
   function claseEstado(estado) {
