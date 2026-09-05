@@ -208,7 +208,7 @@
     html5QrcodeScanner = new Html5Qrcode("lector");
     var config = {
       fps: 20,
-      qrbox: function (w, h) { var lado = Math.floor(Math.min(w, h) * 0.7); return { width: lado, height: lado }; },
+      // Sin qrbox: toda la pantalla es zona activa de escaneo (sin recuadro oscurecido)
       experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
     html5QrcodeScanner.start({ facingMode: "user" }, config, onEscaneoExitoso, function () {})
