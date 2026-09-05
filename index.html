@@ -27,64 +27,60 @@
   header img { height: 40px; }
   header h1 { font-size: 15px; margin: 0; line-height: 1.2; }
   #relojReloj { position: absolute; top: 10px; right: 16px; font-size: 14px; opacity: 0.85; z-index: 5; }
-  #btnCerrarSesion {
-    position: absolute; bottom: 10px; right: 16px; z-index: 5;
-    font-size: 11px; opacity: 0.5; color: #fff; background: none; border: none; cursor: pointer;
-  }
 
   #vistaCarga { display: flex; }
-  #vistaCarga p { font-size: 15px; opacity: 0.85; }
 
-  /* ---- Login ---- */
   #vistaLogin { display: none; }
   #vistaLogin .caja {
-    background: rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 26px 24px;
-    width: 300px;
-    max-width: 85vw;
+    background: rgba(255,255,255,0.08); border-radius: 14px; padding: 26px 24px;
+    width: 300px; max-width: 85vw;
   }
   #vistaLogin h2 { margin: 0 0 16px; font-size: 17px; }
-  #vistaLogin input {
-    width: 100%; padding: 11px; margin-top: 8px;
-    border: none; border-radius: 6px; font-size: 14px;
-  }
+  #vistaLogin input { width: 100%; padding: 11px; margin-top: 8px; border: none; border-radius: 6px; font-size: 14px; }
   #vistaLogin button {
-    width: 100%; padding: 12px; margin-top: 16px;
-    border: none; border-radius: 6px;
-    background: #d9a13c; color: #1e3a5f; font-weight: bold; font-size: 15px;
-    cursor: pointer;
+    width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px;
+    background: #d9a13c; color: #1e3a5f; font-weight: bold; font-size: 15px; cursor: pointer;
   }
   #vistaLogin button:disabled { opacity: 0.6; }
   #errorLogin { color: #ffb3b3; font-size: 13px; margin-top: 10px; min-height: 16px; }
 
   #vistaEscaneo {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    padding: 0;
-    justify-content: flex-start;
+    display: none; position: fixed; top:0; left:0; right:0; bottom:0; padding:0; justify-content:flex-start;
   }
   #lector { width: 100vw; height: 100vh; overflow: hidden; }
   #lector video { width: 100% !important; height: 100% !important; object-fit: cover; transform: scaleX(-1); -webkit-transform: scaleX(-1); }
   #vistaEscaneo p.instruccion {
-    position: absolute; bottom: 60px; left: 0; right: 0;
-    margin: 0; font-size: 16px; opacity: 0.95; text-align: center;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-    z-index: 6;
+    position: absolute; bottom: 60px; left: 0; right: 0; margin: 0; font-size: 16px; opacity: 0.95;
+    text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); z-index: 6;
   }
   #vistaEscaneo p.instruccion strong { display: block; font-size: 20px; margin-bottom: 4px; }
-  #sesionActiva { font-size: 12px; opacity: 0.8; margin-top: 6px; }
-  #panelDebug {
-    position: absolute; top: 55px; left: 8px; right: 8px;
-    z-index: 6; background: rgba(0,0,0,0.45); border-radius: 8px; padding: 6px 10px;
+  #panelTop {
+    position: absolute; top: 55px; left: 8px; right: 8px; z-index: 6;
+    background: rgba(0,0,0,0.45); border-radius: 8px; padding: 6px 10px;
   }
+  #sesionActiva { font-size: 12px; opacity: 0.9; }
+  #debugInfo { font-size: 11px; opacity: 0.85; margin-top: 4px; word-break: break-word; }
+  #btnReiniciar {
+    margin-top: 8px; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none;
+    background: rgba(255,255,255,0.2); color: #fff; cursor: pointer;
+  }
+  #btnCerrarSesion {
+    position: absolute; bottom: 10px; right: 16px; z-index: 6;
+    font-size: 11px; opacity: 0.6; color: #fff; background: none; border: none; cursor: pointer;
+  }
+
+  #vistaVerificando { display: none; }
+  .spinner {
+    width: 60px; height: 60px; border: 5px solid rgba(255,255,255,0.25);
+    border-top-color: #fff; border-radius: 50%; animation: girar 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
 
   #vistaResultado { display: none; }
   .icono-resultado {
     width: 110px; height: 110px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 60px; margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 60px; margin-bottom: 14px;
   }
   .icono-ok { background: #2fa84f; }
   .icono-tarde { background: #e0a800; }
@@ -98,8 +94,6 @@
   .fondo-tarde { background: rgba(224,168,0,0.25); }
   .fondo-falta { background: rgba(192,57,43,0.25); }
   .fondo-error { background: rgba(127,140,141,0.25); }
-
-  #mensajeExtra { font-size: 14px; margin-top: 10px; opacity: 0.85; max-width: 300px; }
   #contadorReset { font-size: 12px; opacity: 0.6; margin-top: 30px; }
 </style>
 </head>
@@ -111,11 +105,8 @@
 </header>
 <div id="relojReloj"></div>
 
-<div class="pantalla" id="vistaCarga">
-  <p>Cargando...</p>
-</div>
+<div class="pantalla" id="vistaCarga"><p>Cargando...</p></div>
 
-<!-- ---- LOGIN (solo ADMIN puede operar el escáner) ---- -->
 <div class="pantalla" id="vistaLogin">
   <div class="caja">
     <h2>Iniciar sesión para escanear</h2>
@@ -129,11 +120,16 @@
 <div class="pantalla" id="vistaEscaneo">
   <div id="lector"></div>
   <p class="instruccion"><strong>Acerca tu carnet a la cámara</strong>Escaneo automático de entrada / salida</p>
-  <div id="panelDebug">
+  <div id="panelTop">
     <div id="sesionActiva"></div>
-    <div id="debugInfo" style="font-size:11px; opacity:0.85; margin-top:4px;"></div>
-    <button onclick="reiniciarDia()" style="margin-top:8px; font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:rgba(255,255,255,0.2); color:#fff; cursor:pointer;">Reiniciar registros de hoy (esta tablet)</button>
+    <div id="debugInfo"></div>
+    <button id="btnReiniciar" onclick="location.reload()">Recargar CONFIG del Sheet</button>
   </div>
+</div>
+
+<div class="pantalla" id="vistaVerificando">
+  <div class="spinner"></div>
+  <p>Verificando con el servidor...</p>
 </div>
 
 <div class="pantalla" id="vistaResultado">
@@ -141,8 +137,7 @@
   <div id="nombreEstudiante">—</div>
   <div id="detalleEstudiante">—</div>
   <div id="estadoTexto">—</div>
-  <div id="mensajeExtra"></div>
-  <div id="contadorReset">Volviendo al escáner...</div>
+  <div id="contadorReset"></div>
 </div>
 
 <button id="btnCerrarSesion" onclick="cerrarSesion()">Cerrar sesión</button>
@@ -152,22 +147,10 @@
 
   var procesando = false;
   var html5QrcodeScanner;
-  var CFG = null;
   var USUARIO_ACTIVO = null;
 
-  // ---------- Utilidades de hora local ----------
-  function minutosDesdeTexto(txt) { var p = txt.split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
-  function horaActualMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
-  function horaActualTexto() {
-    var d = new Date();
-    return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
-  }
-  function fechaHoyClave() { var d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
-
-  // ---------- Sesión (ADMIN) ----------
-  function guardarSesion(usuario) {
-    sessionStorage.setItem("sesionAdmin", JSON.stringify(usuario));
-  }
+  // ---------- Sesión ----------
+  function guardarSesion(usuario) { sessionStorage.setItem("sesionAdmin", JSON.stringify(usuario)); }
   function leerSesion() {
     var s = sessionStorage.getItem("sesionAdmin");
     return s ? JSON.parse(s) : null;
@@ -183,7 +166,6 @@
     var dni = document.getElementById("loginDni").value.trim();
     var err = document.getElementById("errorLogin");
     err.textContent = "";
-
     if (!nombre || !dni) { err.textContent = "Ingrese usuario y DNI."; return; }
 
     document.getElementById("btnLogin").disabled = true;
@@ -191,17 +173,11 @@
       .then(function (res) { return res.json(); })
       .then(function (data) {
         document.getElementById("btnLogin").disabled = false;
-        if (!data.ok) {
-          err.textContent = data.mensaje || "Usuario o clave incorrectos.";
-          return;
-        }
-        if (data.usuario.rol !== "ADMIN") {
-          err.textContent = "Solo el personal ADMIN puede operar el escáner.";
-          return;
-        }
+        if (!data.ok) { err.textContent = data.mensaje || "Usuario o clave incorrectos."; return; }
+        if (data.usuario.rol !== "ADMIN") { err.textContent = "Solo el personal ADMIN puede operar el escáner."; return; }
         USUARIO_ACTIVO = data.usuario;
         guardarSesion(USUARIO_ACTIVO);
-        cargarConfig();
+        mostrarPantallaEscaneo();
       })
       .catch(function () {
         document.getElementById("btnLogin").disabled = false;
@@ -209,60 +185,13 @@
       });
   }
 
-  // ---------- Registro local del día (ENTRADA/SALIDA sin esperar al servidor) ----------
-  function getRegistrosHoy() {
-    var clave = "asistencia_" + fechaHoyClave();
-    var datos = localStorage.getItem(clave);
-    return datos ? JSON.parse(datos) : {};
-  }
-  function guardarRegistroHoy(idQR, tipo) {
-    var clave = "asistencia_" + fechaHoyClave();
-    var registros = getRegistrosHoy();
-    registros[idQR] = registros[idQR] || {};
-    registros[idQR][tipo] = true;
-    localStorage.setItem(clave, JSON.stringify(registros));
-  }
-
-  // ---------- CONFIG (una sola vez por sesión) ----------
-  function cargarConfig() {
-    document.getElementById("vistaLogin").style.display = "none";
-    document.getElementById("vistaCarga").style.display = "flex";
-
-    fetch(WEBAPP_URL + "?accion=obtenerConfigPublica")
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        CFG = data.ok ? data.config : configPorDefecto();
-        mostrarPantallaEscaneo();
-      })
-      .catch(function () {
-        CFG = configPorDefecto();
-        mostrarPantallaEscaneo();
-      });
-  }
-  function configPorDefecto() {
-    return { HORA_PUNTUAL_DESDE: "00:00", HORA_PUNTUAL_HASTA: "12:43", HORA_TARDE_HASTA: "13:59",
-             HORA_SALIDA_DESDE: "18:16", HORA_SALIDA_HASTA: "18:45" };
-  }
-
   function mostrarPantallaEscaneo() {
     document.getElementById("vistaCarga").style.display = "none";
+    document.getElementById("vistaLogin").style.display = "none";
     document.getElementById("vistaEscaneo").style.display = "flex";
     document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
-    document.getElementById("debugInfo").textContent =
-      "CONFIG cargado: PUNTUAL " + CFG.HORA_PUNTUAL_DESDE + "-" + CFG.HORA_PUNTUAL_HASTA +
-      " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
-      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA +
-      " | Hoy registrados: " + JSON.stringify(getRegistrosHoy());
+    document.getElementById("debugInfo").textContent = "Listo para escanear.";
     iniciarEscaner();
-  }
-
-  function reiniciarDia() {
-    localStorage.removeItem("asistencia_" + fechaHoyClave());
-    document.getElementById("debugInfo").textContent =
-      "Registros de hoy borrados. CONFIG: PUNTUAL hasta " + CFG.HORA_PUNTUAL_HASTA +
-      " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
-      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA;
-    alert("Listo, se borraron los registros de hoy en esta tablet.");
   }
 
   function actualizarReloj() {
@@ -278,13 +207,9 @@
     html5QrcodeScanner = new Html5Qrcode("lector");
     var config = {
       fps: 20,
-      qrbox: function (w, h) {
-        var lado = Math.floor(Math.min(w, h) * 0.7);
-        return { width: lado, height: lado };
-      },
+      qrbox: function (w, h) { var lado = Math.floor(Math.min(w, h) * 0.7); return { width: lado, height: lado }; },
       experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
-
     html5QrcodeScanner.start({ facingMode: "user" }, config, onEscaneoExitoso, function () {})
       .catch(function () {
         Html5Qrcode.getCameras().then(function (camaras) {
@@ -299,123 +224,23 @@
     if (procesando) return;
     procesando = true;
     html5QrcodeScanner.pause(true);
-    procesarLocalmente(idDetectado.trim().toUpperCase());
+    consultarServidor(idDetectado.trim().toUpperCase());
   }
 
-  // ---------- Lógica local (INMEDIATA) ----------
-  function procesarLocalmente(idQR) {
-    var registrosHoy = getRegistrosHoy();
-    var yaTieneEntrada = registrosHoy[idQR] && registrosHoy[idQR]["ENTRADA"];
-    var yaTieneSalida = registrosHoy[idQR] && registrosHoy[idQR]["SALIDA"];
-    var minActual = horaActualMin();
-    var horaTxt = horaActualTexto();
+  // ---------- Consulta al servidor (única fuente de verdad, sin cálculo local) ----------
+  function consultarServidor(idQR) {
+    document.getElementById("vistaEscaneo").style.display = "none";
+    document.getElementById("vistaVerificando").style.display = "flex";
 
-    document.getElementById("debugInfo").textContent =
-      "Escaneado: " + idQR + " | yaTieneEntrada: " + (!!yaTieneEntrada) +
-      " | yaTieneSalida: " + (!!yaTieneSalida) + " | hora local: " + horaTxt +
-      " | registrosHoy[" + idQR + "]: " + JSON.stringify(registrosHoy[idQR] || {});
-
-    if (yaTieneSalida) {
-      mostrarResultado({ ok: false, mensaje: "Ya registraste tu entrada y salida hoy." });
-      return;
-    }
-
-    if (!yaTieneEntrada) {
-      var puntualDesde = minutosDesdeTexto(CFG.HORA_PUNTUAL_DESDE);
-      if (minActual < puntualDesde) {
-        mostrarResultado({ ok: false, mensaje: "AÚN NO ES HORA DE INGRESAR" });
-        return;
-      }
-      var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
-      var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
-      var estado = (minActual <= puntualHasta) ? "PUNTUAL" : (minActual <= tardeHasta) ? "TARDE" : "FALTA";
-
-      guardarRegistroHoy(idQR, "ENTRADA");
-      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, idQR: idQR, hora: horaTxt });
-      enviarAlServidorEnSegundoPlano(idQR, "ENTRADA", estado);
-    } else {
-      var salidaDesde = minutosDesdeTexto(CFG.HORA_SALIDA_DESDE);
-      var salidaHasta = minutosDesdeTexto(CFG.HORA_SALIDA_HASTA);
-
-      if (minActual < salidaDesde) {
-        mostrarResultado({ ok: false, mensaje: "AÚN NO TERMINÓ TUS CLASES" });
-        return;
-      }
-      var estadoSalida = (minActual <= salidaHasta) ? "SALIDA OK" : "FUERA DE HORARIO";
-      guardarRegistroHoy(idQR, "SALIDA");
-      mostrarResultado({ ok: true, tipo: "SALIDA", estado: estadoSalida, idQR: idQR, hora: horaTxt });
-      enviarAlServidorEnSegundoPlano(idQR, "SALIDA", estadoSalida);
-    }
-  }
-
-  // Envía el registro real a Google Sheets y corrige la pantalla si el estado final difiere
-  // del calculado localmente (ej. si el escaneo ocurrió justo en el límite entre PUNTUAL/TARDE
-  // y el servidor tardó unos segundos en procesar, cruzando al siguiente estado).
-  function enviarAlServidorEnSegundoPlano(idQR, tipoEsperado, estadoMostrado) {
-    var dbg = document.getElementById("debugInfo");
-    fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
-      .then(function (res) {
-        if (dbg) dbg.textContent += " | HTTP status: " + res.status;
-        return res.json();
-      })
+    var url = WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR);
+    fetch(url)
+      .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (dbg) dbg.textContent += " | Respuesta servidor: " + JSON.stringify(data);
-        if (data.ok && data.tipo) {
-          // El servidor es la fuente de verdad: sincroniza la memoria local a lo que
-          // realmente quedó registrado, sin importar lo que la tablet había supuesto.
-          if (data.tipo !== tipoEsperado) {
-            deshacerRegistroLocal(idQR, tipoEsperado); // borra la marca optimista equivocada
-          }
-          guardarRegistroHoy(idQR, data.tipo);
-          if (data.tipo !== tipoEsperado || data.estado !== estadoMostrado) {
-            corregirEstadoEnPantalla(idQR, data.estado, data.tipo);
-          }
-        } else if (!data.ok) {
-          // El servidor rechazó el registro (ej. "ya registraste entrada y salida hoy").
-          // Deshace la marca local que se había puesto de forma optimista, para no quedar
-          // desincronizados: el próximo escaneo debe reintentar desde el mismo punto.
-          deshacerRegistroLocal(idQR, tipoEsperado);
-        }
+        mostrarResultado(idQR, data);
       })
       .catch(function (err) {
-        if (dbg) dbg.textContent += " | ERROR DE RED: " + err.message;
-        // Sin confirmación del servidor, deshacemos la marca local optimista para
-        // que el próximo escaneo reintente en vez de quedar desincronizado.
-        deshacerRegistroLocal(idQR, tipoEsperado);
+        mostrarResultado(idQR, { ok: false, mensaje: "Error de conexión: " + err.message });
       });
-  }
-
-  function deshacerRegistroLocal(idQR, tipo) {
-    var clave = "asistencia_" + fechaHoyClave();
-    var registros = getRegistrosHoy();
-    if (registros[idQR]) {
-      delete registros[idQR][tipo];
-      localStorage.setItem(clave, JSON.stringify(registros));
-    }
-  }
-
-  // Si la pantalla de resultado sigue mostrando este mismo estudiante, actualiza el estado visible
-  function corregirEstadoEnPantalla(idQR, estadoReal, tipoReal) {
-    var nombreDiv = document.getElementById("nombreEstudiante");
-    if (document.getElementById("vistaResultado").style.display !== "flex") return;
-    if (!nombreDiv || nombreDiv.textContent !== idQR) return; // ya se fue a otro escaneo
-
-    var icono = document.getElementById("iconoResultado");
-    var estadoDiv = document.getElementById("estadoTexto");
-    var detalleDiv = document.getElementById("detalleEstudiante");
-    var cls = claseEstado(estadoReal);
-
-    icono.className = "icono-resultado";
-    icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
-    icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
-
-    estadoDiv.className = "";
-    estadoDiv.classList.add("fondo-" + cls);
-    estadoDiv.textContent = estadoReal + " (corregido)";
-
-    if (tipoReal && detalleDiv) {
-      detalleDiv.textContent = (tipoReal === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA") + " (corregido por el servidor)";
-    }
   }
 
   function claseEstado(estado) {
@@ -425,41 +250,39 @@
     return "error";
   }
 
-  function mostrarResultado(data) {
-    document.getElementById("vistaEscaneo").style.display = "none";
+  function mostrarResultado(idQR, data) {
+    document.getElementById("vistaVerificando").style.display = "none";
     document.getElementById("vistaResultado").style.display = "flex";
+    document.getElementById("debugInfo").textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
 
     var icono = document.getElementById("iconoResultado");
     var estadoDiv = document.getElementById("estadoTexto");
     var nombreDiv = document.getElementById("nombreEstudiante");
     var detalleDiv = document.getElementById("detalleEstudiante");
-    var extraDiv = document.getElementById("mensajeExtra");
 
     icono.className = "icono-resultado";
     estadoDiv.className = "";
-    extraDiv.textContent = "";
 
     if (!data.ok) {
       icono.classList.add("icono-falta");
       icono.textContent = "✖";
-      nombreDiv.textContent = "No se pudo registrar";
-      detalleDiv.textContent = "";
+      nombreDiv.textContent = idQR;
+      detalleDiv.textContent = "No se pudo registrar";
       estadoDiv.classList.add("fondo-falta");
       estadoDiv.textContent = data.mensaje || "Error desconocido";
     } else {
       var cls = claseEstado(data.estado);
       icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
       icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
-
-      nombreDiv.textContent = data.idQR;
-      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA — " : "Registro de SALIDA — ") + data.hora;
-
+      nombreDiv.textContent = idQR;
+      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA");
       estadoDiv.classList.add("fondo-" + cls);
       estadoDiv.textContent = data.estado;
     }
 
-    var segundos = 3;
+    var segundos = 4;
     var contador = document.getElementById("contadorReset");
+    contador.textContent = "Volviendo al escáner en " + segundos + "...";
     var intervalo = setInterval(function () {
       segundos--;
       contador.textContent = "Volviendo al escáner en " + segundos + "...";
@@ -480,7 +303,7 @@
     document.getElementById("vistaCarga").style.display = "none";
     if (sesion) {
       USUARIO_ACTIVO = sesion;
-      cargarConfig();
+      mostrarPantallaEscaneo();
     } else {
       document.getElementById("vistaLogin").style.display = "flex";
     }
