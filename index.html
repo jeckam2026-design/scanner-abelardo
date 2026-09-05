@@ -58,12 +58,27 @@
   #vistaLogin button:disabled { opacity: 0.6; }
   #errorLogin { color: #ffb3b3; font-size: 13px; margin-top: 10px; min-height: 16px; }
 
-  #vistaEscaneo { display: none; }
-  #lector { width: 320px; max-width: 85vw; border-radius: 16px; overflow: hidden; border: 4px solid rgba(255,255,255,0.4); }
-  #lector video { transform: scaleX(-1); -webkit-transform: scaleX(-1); }
-  #vistaEscaneo p.instruccion { margin-top: 20px; font-size: 16px; opacity: 0.9; }
+  #vistaEscaneo {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    padding: 0;
+    justify-content: flex-start;
+  }
+  #lector { width: 100vw; height: 100vh; overflow: hidden; }
+  #lector video { width: 100% !important; height: 100% !important; object-fit: cover; transform: scaleX(-1); -webkit-transform: scaleX(-1); }
+  #vistaEscaneo p.instruccion {
+    position: absolute; bottom: 60px; left: 0; right: 0;
+    margin: 0; font-size: 16px; opacity: 0.95; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    z-index: 6;
+  }
   #vistaEscaneo p.instruccion strong { display: block; font-size: 20px; margin-bottom: 4px; }
-  #sesionActiva { font-size: 12px; opacity: 0.6; margin-top: 6px; }
+  #sesionActiva { font-size: 12px; opacity: 0.8; margin-top: 6px; }
+  #panelDebug {
+    position: absolute; top: 55px; left: 8px; right: 8px;
+    z-index: 6; background: rgba(0,0,0,0.45); border-radius: 8px; padding: 6px 10px;
+  }
 
   #vistaResultado { display: none; }
   .icono-resultado {
@@ -114,9 +129,11 @@
 <div class="pantalla" id="vistaEscaneo">
   <div id="lector"></div>
   <p class="instruccion"><strong>Acerca tu carnet a la cámara</strong>Escaneo automático de entrada / salida</p>
-  <div id="sesionActiva"></div>
-  <div id="debugInfo" style="font-size:11px; opacity:0.55; margin-top:10px; max-width:300px;"></div>
-  <button onclick="reiniciarDia()" style="margin-top:14px; font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:rgba(255,255,255,0.15); color:#fff; cursor:pointer;">Reiniciar registros de hoy (esta tablet)</button>
+  <div id="panelDebug">
+    <div id="sesionActiva"></div>
+    <div id="debugInfo" style="font-size:11px; opacity:0.85; margin-top:4px;"></div>
+    <button onclick="reiniciarDia()" style="margin-top:8px; font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:rgba(255,255,255,0.2); color:#fff; cursor:pointer;">Reiniciar registros de hoy (esta tablet)</button>
+  </div>
 </div>
 
 <div class="pantalla" id="vistaResultado">
@@ -261,7 +278,10 @@
     html5QrcodeScanner = new Html5Qrcode("lector");
     var config = {
       fps: 20,
-      qrbox: function (w, h) { return { width: Math.floor(w * 0.85), height: Math.floor(h * 0.85) }; },
+      qrbox: function (w, h) {
+        var lado = Math.floor(Math.min(w, h) * 0.7);
+        return { width: lado, height: lado };
+      },
       experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
 
@@ -327,14 +347,21 @@
   // del calculado localmente (ej. si el escaneo ocurrió justo en el límite entre PUNTUAL/TARDE
   // y el servidor tardó unos segundos en procesar, cruzando al siguiente estado).
   function enviarAlServidorEnSegundoPlano(idQR, tipoEsperado, estadoMostrado) {
+    var dbg = document.getElementById("debugInfo");
     fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        if (dbg) dbg.textContent += " | HTTP status: " + res.status;
+        return res.json();
+      })
       .then(function (data) {
+        if (dbg) dbg.textContent += " | Respuesta servidor: " + JSON.stringify(data);
         if (data.ok && data.estado && data.estado !== estadoMostrado) {
           corregirEstadoEnPantalla(idQR, data.estado);
         }
       })
-      .catch(function () { /* si falla la conexión, el trigger de faltas/limpieza lo resuelve después */ });
+      .catch(function (err) {
+        if (dbg) dbg.textContent += " | ERROR DE RED: " + err.message;
+      });
   }
 
   // Si la pantalla de resultado sigue mostrando este mismo estudiante, actualiza el estado visible
