@@ -212,13 +212,42 @@
       experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
     html5QrcodeScanner.start({ facingMode: "user" }, config, onEscaneoExitoso, function () {})
+      .then(forzarVideoPantallaCompleta)
       .catch(function () {
         Html5Qrcode.getCameras().then(function (camaras) {
           if (camaras && camaras.length) {
-            html5QrcodeScanner.start(camaras[0].id, config, onEscaneoExitoso, function () {});
+            html5QrcodeScanner.start(camaras[0].id, config, onEscaneoExitoso, function () {})
+              .then(forzarVideoPantallaCompleta);
           }
         });
       });
+  }
+
+  // Fuerza por JavaScript (máxima prioridad, gana a cualquier estilo puesto por la librería)
+  // que el <video> real ocupe toda la pantalla, sin importar la resolución nativa de la cámara.
+  function forzarVideoPantallaCompleta() {
+    setTimeout(function () {
+      var contenedor = document.getElementById("lector");
+      var video = contenedor ? contenedor.querySelector("video") : null;
+      if (video) {
+        video.removeAttribute("width");
+        video.removeAttribute("height");
+        video.style.setProperty("width", "100vw", "important");
+        video.style.setProperty("height", "100vh", "important");
+        video.style.setProperty("object-fit", "cover", "important");
+        video.style.setProperty("position", "fixed", "important");
+        video.style.setProperty("top", "0", "important");
+        video.style.setProperty("left", "0", "important");
+      }
+      // También algunos divs internos que la librería crea con tamaño fijo
+      if (contenedor) {
+        var hijos = contenedor.querySelectorAll("div");
+        hijos.forEach(function (div) {
+          div.style.setProperty("width", "100%", "important");
+          div.style.setProperty("height", "100%", "important");
+        });
+      }
+    }, 300);
   }
 
   function onEscaneoExitoso(idDetectado) {
