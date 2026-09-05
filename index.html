@@ -47,8 +47,9 @@
   #vistaEscaneo {
     display: none; position: fixed; top:0; left:0; right:0; bottom:0; padding:0; justify-content:flex-start;
   }
-  #lector { width: 100vw; height: 100vh; overflow: hidden; }
-  #lector video { width: 100% !important; height: 100% !important; object-fit: cover; transform: scaleX(-1); -webkit-transform: scaleX(-1); }
+  #lector { width: 100vw !important; height: 100vh !important; overflow: hidden; }
+  #lector > div { width: 100% !important; height: 100% !important; }
+  #lector video { width: 100% !important; height: 100% !important; object-fit: cover !important; transform: scaleX(-1); -webkit-transform: scaleX(-1); }
   #vistaEscaneo p.instruccion {
     position: absolute; bottom: 60px; left: 0; right: 0; margin: 0; font-size: 16px; opacity: 0.95;
     text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); z-index: 6;
@@ -222,78 +223,58 @@
 
   function onEscaneoExitoso(idDetectado) {
     if (procesando) return;
+    var idQR = idDetectado.trim().toUpperCase();
+    if (idQR === ultimoIdMostrado) return; // evita doble lectura del mismo carnet sin moverlo
     procesando = true;
-    html5QrcodeScanner.pause(true);
-    consultarServidor(idDetectado.trim().toUpperCase());
-  }
 
-  // ---------- Consulta al servidor (única fuente de verdad, sin cálculo local) ----------
-  function consultarServidor(idQR) {
-    document.getElementById("vistaEscaneo").style.display = "none";
-    document.getElementById("vistaVerificando").style.display = "flex";
+    // Confirmación INMEDIATA en pantalla (sin esperar al servidor) — solo confirma que se leyó
+    mostrarConfirmacionRapida(idQR);
 
-    var url = WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR);
-    fetch(url)
+    // Se manda a registrar en segundo plano, sin bloquear el siguiente escaneo.
+    // Cualquier duplicado o inconsistencia lo resuelve el trigger de limpieza nocturno.
+    fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        mostrarResultado(idQR, data);
+        document.getElementById("debugInfo").textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
       })
       .catch(function (err) {
-        mostrarResultado(idQR, { ok: false, mensaje: "Error de conexión: " + err.message });
+        document.getElementById("debugInfo").textContent = "ERROR DE RED (" + idQR + "): " + err.message;
       });
   }
 
-  function claseEstado(estado) {
-    if (estado === "PUNTUAL" || estado === "SALIDA OK") return "ok";
-    if (estado === "TARDE") return "tarde";
-    if (estado === "FALTA" || estado === "FUERA DE HORARIO") return "falta";
-    return "error";
-  }
+  var ultimoIdMostrado = null;
+  var timeoutResumen = null;
 
-  function mostrarResultado(idQR, data) {
-    document.getElementById("vistaVerificando").style.display = "none";
+  // Muestra una confirmación breve de que el QR se leyó, y vuelve a escanear casi al instante
+  function mostrarConfirmacionRapida(idQR) {
+    ultimoIdMostrado = idQR;
+    document.getElementById("vistaEscaneo").style.display = "none";
     document.getElementById("vistaResultado").style.display = "flex";
-    document.getElementById("debugInfo").textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
 
     var icono = document.getElementById("iconoResultado");
     var estadoDiv = document.getElementById("estadoTexto");
     var nombreDiv = document.getElementById("nombreEstudiante");
     var detalleDiv = document.getElementById("detalleEstudiante");
 
-    icono.className = "icono-resultado";
-    estadoDiv.className = "";
+    icono.className = "icono-resultado icono-ok";
+    icono.textContent = "✔";
+    nombreDiv.textContent = idQR;
+    detalleDiv.textContent = "Registrando...";
+    estadoDiv.className = "fondo-ok";
+    estadoDiv.textContent = "LEÍDO";
 
-    if (!data.ok) {
-      icono.classList.add("icono-falta");
-      icono.textContent = "✖";
-      nombreDiv.textContent = idQR;
-      detalleDiv.textContent = "No se pudo registrar";
-      estadoDiv.classList.add("fondo-falta");
-      estadoDiv.textContent = data.mensaje || "Error desconocido";
-    } else {
-      var cls = claseEstado(data.estado);
-      icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
-      icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
-      nombreDiv.textContent = idQR;
-      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA");
-      estadoDiv.classList.add("fondo-" + cls);
-      estadoDiv.textContent = data.estado;
-    }
-
-    var segundos = 4;
-    var contador = document.getElementById("contadorReset");
-    contador.textContent = "Volviendo al escáner en " + segundos + "...";
-    var intervalo = setInterval(function () {
-      segundos--;
-      contador.textContent = "Volviendo al escáner en " + segundos + "...";
-      if (segundos <= 0) { clearInterval(intervalo); volverAEscanear(); }
-    }, 1000);
+    document.getElementById("contadorReset").textContent = "";
+    if (timeoutResumen) clearTimeout(timeoutResumen);
+    timeoutResumen = setTimeout(volverAEscanear, 500); // vuelve casi de inmediato
   }
 
   function volverAEscanear() {
     document.getElementById("vistaResultado").style.display = "none";
     document.getElementById("vistaEscaneo").style.display = "flex";
     procesando = false;
+    // Libera el "último ID" después de un momento, para permitir volver a escanear
+    // el mismo carnet más tarde (ej. a la hora de salida) sin bloquear el sistema.
+    setTimeout(function () { ultimoIdMostrado = null; }, 3000);
     html5QrcodeScanner.resume();
   }
 
