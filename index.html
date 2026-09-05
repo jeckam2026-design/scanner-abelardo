@@ -129,7 +129,7 @@
 <button id="btnCerrarSesion" onclick="cerrarSesion()">Cerrar sesión</button>
 
 <script>
-  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwWHo6K5SUOdXR3OKaVzFlryxhqcia2DsknxSy08ralEaBqaEzNO5oEEK4n7oWYZkza/exec";
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwbFz2SlvxX-gbRIf9pjTBkgw4qZLZLwLicssIAKWYROEZqkDXaIguMiyXy3MkjsddC/exec";
 
   var procesando = false;
   var html5QrcodeScanner;
@@ -286,7 +286,7 @@
 
       guardarRegistroHoy(idQR, "ENTRADA");
       mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, idQR: idQR, hora: horaTxt });
-      enviarAlServidorEnSegundoPlano(idQR);
+      enviarAlServidorEnSegundoPlano(idQR, "ENTRADA", estado);
     } else {
       var salidaDesde = minutosDesdeTexto(CFG.HORA_SALIDA_DESDE);
       var salidaHasta = minutosDesdeTexto(CFG.HORA_SALIDA_HASTA);
@@ -298,12 +298,41 @@
       var estadoSalida = (minActual <= salidaHasta) ? "SALIDA OK" : "FUERA DE HORARIO";
       guardarRegistroHoy(idQR, "SALIDA");
       mostrarResultado({ ok: true, tipo: "SALIDA", estado: estadoSalida, idQR: idQR, hora: horaTxt });
-      enviarAlServidorEnSegundoPlano(idQR);
+      enviarAlServidorEnSegundoPlano(idQR, "SALIDA", estadoSalida);
     }
   }
 
-  function enviarAlServidorEnSegundoPlano(idQR) {
-    fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR)).catch(function () {});
+  // Envía el registro real a Google Sheets y corrige la pantalla si el estado final difiere
+  // del calculado localmente (ej. si el escaneo ocurrió justo en el límite entre PUNTUAL/TARDE
+  // y el servidor tardó unos segundos en procesar, cruzando al siguiente estado).
+  function enviarAlServidorEnSegundoPlano(idQR, tipoEsperado, estadoMostrado) {
+    fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.ok && data.estado && data.estado !== estadoMostrado) {
+          corregirEstadoEnPantalla(idQR, data.estado);
+        }
+      })
+      .catch(function () { /* si falla la conexión, el trigger de faltas/limpieza lo resuelve después */ });
+  }
+
+  // Si la pantalla de resultado sigue mostrando este mismo estudiante, actualiza el estado visible
+  function corregirEstadoEnPantalla(idQR, estadoReal) {
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    if (document.getElementById("vistaResultado").style.display !== "flex") return;
+    if (!nombreDiv || nombreDiv.textContent !== idQR) return; // ya se fue a otro escaneo
+
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    var cls = claseEstado(estadoReal);
+
+    icono.className = "icono-resultado";
+    icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
+    icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
+
+    estadoDiv.className = "";
+    estadoDiv.classList.add("fondo-" + cls);
+    estadoDiv.textContent = estadoReal + " (corregido)";
   }
 
   function claseEstado(estado) {
