@@ -125,6 +125,7 @@
     <div id="sesionActiva"></div>
     <div id="debugInfo"></div>
     <button id="btnReiniciar" onclick="location.reload()">Recargar CONFIG del Sheet</button>
+    <button id="btnResetearTodo" onclick="resetearTodo()" style="display:none; margin-top:6px; font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:rgba(192,57,43,0.6); color:#fff; cursor:pointer;">⚠️ Resetear todo</button>
   </div>
 </div>
 
@@ -162,6 +163,26 @@
     location.reload();
   }
 
+  // Borra TODOS los registros de asistencia (Sheet) y fuerza recargar la versión
+  // más reciente del código, sin caché. Solo visible para usuarios ADMIN logueados.
+  function resetearTodo() {
+    if (!confirm("¿Seguro? Esto borra TODOS los registros de asistencia y recarga el sistema desde cero.")) return;
+
+    var rol = USUARIO_ACTIVO ? USUARIO_ACTIVO.rol : "";
+    fetch(WEBAPP_URL + "?accion=resetearTodo&rol=" + encodeURIComponent(rol))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        alert(data.mensaje || "Listo.");
+        sessionStorage.clear();
+        localStorage.clear();
+        // Cache-busting: fuerza al navegador a pedir el archivo de nuevo, ignorando caché
+        location.href = location.pathname + "?cb=" + Date.now();
+      })
+      .catch(function (err) {
+        alert("Error al resetear: " + err.message);
+      });
+  }
+
   function intentarLogin() {
     var nombre = document.getElementById("loginNombre").value.trim();
     var dni = document.getElementById("loginDni").value.trim();
@@ -175,7 +196,7 @@
       .then(function (data) {
         document.getElementById("btnLogin").disabled = false;
         if (!data.ok) { err.textContent = data.mensaje || "Usuario o clave incorrectos."; return; }
-        if (data.usuario.rol !== "ADMIN") { err.textContent = "Solo el personal ADMIN puede operar el escáner."; return; }
+        if (data.usuario.rol !== "ADMIN" && data.usuario.rol !== "SUPERADMIN") { err.textContent = "Solo el personal ADMIN puede operar el escáner."; return; }
         USUARIO_ACTIVO = data.usuario;
         guardarSesion(USUARIO_ACTIVO);
         mostrarPantallaEscaneo();
@@ -192,6 +213,9 @@
     document.getElementById("vistaEscaneo").style.display = "flex";
     document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
     document.getElementById("debugInfo").textContent = "Listo para escanear.";
+    if (USUARIO_ACTIVO.rol === "SUPERADMIN") {
+      document.getElementById("btnResetearTodo").style.display = "inline-block";
+    }
     iniciarEscaner();
   }
 
@@ -323,7 +347,7 @@
       icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
       detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA");
       estadoDiv.classList.add("fondo-" + cls);
-      estadoDiv.textContent = data.estado;
+      estadoDiv.textContent = (data.tipo === "SALIDA" && data.mensaje) ? data.mensaje : data.estado;
     }
 
     if (timeoutResumen) clearTimeout(timeoutResumen);
