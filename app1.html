@@ -4,74 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel de Gestión - I.E.P. José Abelardo Quiñones Gonzales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   * { box-sizing: border-box; }
-  body {
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f2f4f7;
-    margin: 0;
-    color: #222;
-  }
+  body { font-family: Arial, Helvetica, sans-serif; background: #f2f4f7; margin: 0; color: #222; }
   header {
-    background: #1e3a5f;
-    color: #fff;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
+    background: #1e3a5f; color: #fff; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
   }
   header .titulo { display: flex; align-items: center; gap: 10px; }
   header img { height: 40px; }
   header h1 { font-size: 15px; margin: 0; line-height: 1.2; }
   header .sesion { font-size: 12px; opacity: 0.85; text-align: right; }
-  header button {
-    background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px;
-    padding: 6px 12px; font-size: 12px; cursor: pointer; margin-left: 8px;
-  }
+  header button { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; margin-left: 8px; }
 
-  #vistaLogin {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 80vh; padding: 16px;
-  }
-  #vistaLogin .caja {
-    background: #fff; border-radius: 12px; padding: 26px 24px; width: 320px; max-width: 90vw;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  }
+  #vistaLogin { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; padding: 16px; }
+  #vistaLogin .caja { background: #fff; border-radius: 12px; padding: 26px 24px; width: 320px; max-width: 90vw; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
   #vistaLogin h2 { margin: 0 0 16px; font-size: 18px; color: #1e3a5f; }
-  #vistaLogin input {
-    width: 100%; padding: 11px; margin-top: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
-  }
-  #vistaLogin button {
-    width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px;
-    background: #1e3a5f; color: #fff; font-weight: bold; font-size: 15px; cursor: pointer;
-  }
+  #vistaLogin input { width: 100%; padding: 11px; margin-top: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  #vistaLogin button { width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px; background: #1e3a5f; color: #fff; font-weight: bold; font-size: 15px; cursor: pointer; }
   #errorLogin { color: #b3261e; font-size: 13px; margin-top: 10px; min-height: 16px; }
 
   #vistaPanel { display: none; }
-  nav.tabs {
-    display: flex; overflow-x: auto; background: #fff; border-bottom: 1px solid #ddd;
-  }
-  nav.tabs button {
-    flex: 1; min-width: 140px; padding: 12px 8px; border: none; background: none; cursor: pointer;
-    font-size: 13px; font-weight: bold; color: #666; border-bottom: 3px solid transparent;
-  }
+  nav.tabs { display: flex; overflow-x: auto; background: #fff; border-bottom: 1px solid #ddd; }
+  nav.tabs button { flex: 1; min-width: 140px; padding: 12px 8px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: bold; color: #666; border-bottom: 3px solid transparent; }
   nav.tabs button.activa { color: #1e3a5f; border-bottom-color: #d9a13c; }
 
-  .contenido-tab { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
+  .contenido-tab { display: none; padding: 16px; max-width: 950px; margin: 0 auto; }
   .contenido-tab.activa { display: block; }
+
+  .sub-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .sub-toggle button {
+    padding: 8px 16px; border: 1px solid #1e3a5f; background: #fff; color: #1e3a5f;
+    border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;
+  }
+  .sub-toggle button.activa { background: #1e3a5f; color: #fff; }
 
   .fila-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 16px; }
   .campo { display: flex; flex-direction: column; font-size: 12px; color: #555; }
-  .campo input, .campo select {
-    padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-top: 4px;
-  }
-  .btn-primario {
-    padding: 10px 18px; border: none; border-radius: 6px; background: #1e3a5f; color: #fff;
-    font-weight: bold; cursor: pointer; font-size: 14px; height: fit-content;
-  }
+  .campo input, .campo select, .campo textarea { padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-top: 4px; font-family: inherit; }
+  .btn-primario { padding: 10px 18px; border: none; border-radius: 6px; background: #1e3a5f; color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; height: fit-content; }
   .btn-primario:disabled { opacity: 0.6; }
+  .btn-secundario { padding: 9px 16px; border: 1px solid #1e3a5f; border-radius: 6px; background: #fff; color: #1e3a5f; font-weight: bold; cursor: pointer; font-size: 13px; }
+  .btn-mini { padding: 5px 10px; border: none; border-radius: 5px; background: #d9a13c; color: #1e3a5f; font-weight: bold; cursor: pointer; font-size: 12px; }
 
   table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
   th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #eee; }
@@ -85,14 +62,19 @@
 
   .mensaje-ok { background: #d9f2df; color: #1a7a3a; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
   .mensaje-error { background: #fdecea; color: #b3261e; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
+  .nota-rango { font-size: 12px; color: #777; margin: -8px 0 14px; }
 
   .tarjetas-stats { display: flex; flex-wrap: wrap; gap: 12px; }
-  .tarjeta-stat {
-    background: #fff; border-radius: 10px; padding: 16px 20px; min-width: 140px; flex: 1;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center;
-  }
-  .tarjeta-stat .numero { font-size: 28px; font-weight: bold; color: #1e3a5f; }
+  .tarjeta-stat { background: #fff; border-radius: 10px; padding: 16px 20px; min-width: 140px; flex: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; }
+  .tarjeta-stat .numero { font-size: 26px; font-weight: bold; color: #1e3a5f; }
+  .tarjeta-stat .porcentaje { font-size: 14px; color: #d9a13c; font-weight: bold; }
   .tarjeta-stat .etiqueta { font-size: 12px; color: #666; margin-top: 4px; }
+
+  .fila-justificar { display: none; background: #fafafa; }
+  .fila-justificar td { text-align: left; padding: 12px; }
+  .fila-justificar textarea { width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
+
+  .botones-export { display: flex; gap: 10px; margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -120,57 +102,79 @@
 
 <div id="vistaPanel">
   <nav class="tabs">
-    <button class="tab-btn activa" data-tab="tabAula" onclick="cambiarTab('tabAula')">Asistencia por Aula</button>
+    <button class="tab-btn activa" data-tab="tabAsistencia" onclick="cambiarTab('tabAsistencia')">Asistencia</button>
     <button class="tab-btn" data-tab="tabJustificar" onclick="cambiarTab('tabJustificar')">Justificaciones</button>
     <button class="tab-btn" data-tab="tabReportes" onclick="cambiarTab('tabReportes')">Reportes</button>
     <button class="tab-btn" data-tab="tabStats" onclick="cambiarTab('tabStats')">Estadísticas</button>
   </nav>
 
-  <!-- TAB 1: ASISTENCIA POR AULA -->
-  <div id="tabAula" class="contenido-tab activa">
-    <div class="fila-filtros">
-      <div class="campo"><label>Fecha</label><input type="date" id="aulaFecha"></div>
-      <div class="campo"><label>Grado</label>
-        <select id="aulaGrado">
-          <option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option>
-        </select>
-      </div>
-      <div class="campo"><label>Sección</label>
-        <select id="aulaSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-      </div>
-      <button class="btn-primario" onclick="consultarAula()">Consultar</button>
+  <!-- ==================== TAB 1: ASISTENCIA ==================== -->
+  <div id="tabAsistencia" class="contenido-tab activa">
+    <div class="sub-toggle">
+      <button id="btnModoEstudiante" class="activa" onclick="cambiarModoAsistencia('estudiante')">Por estudiante</button>
+      <button id="btnModoAula" onclick="cambiarModoAsistencia('aula')">Por aula</button>
     </div>
-    <div id="aulaResultado"></div>
+
+    <div class="fila-filtros">
+      <div class="campo" id="campoAsisId"><label>ID del estudiante</label><input type="text" id="asisId" placeholder="Ej: JAQ001"></div>
+      <div class="campo" id="campoAsisGrado" style="display:none;"><label>Grado</label>
+        <select id="asisGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
+      </div>
+      <div class="campo" id="campoAsisSeccion" style="display:none;"><label>Sección</label>
+        <select id="asisSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </div>
+      <div class="campo"><label>Desde</label><input type="date" id="asisDesde"></div>
+      <div class="campo"><label>Hasta</label><input type="date" id="asisHasta"></div>
+      <button class="btn-primario" onclick="consultarAsistencia()">Consultar</button>
+    </div>
+    <p class="nota-rango">Por defecto se muestra el mes actual. Cambia "Desde/Hasta" para otro rango.</p>
+    <div id="asisResultado"></div>
   </div>
 
-  <!-- TAB 2: JUSTIFICACIONES -->
+  <!-- ==================== TAB 2: JUSTIFICACIONES ==================== -->
   <div id="tabJustificar" class="contenido-tab">
     <div class="fila-filtros">
       <div class="campo"><label>ID del estudiante</label><input type="text" id="justId" placeholder="Ej: JAQ001"></div>
-      <div class="campo"><label>Fecha a justificar</label><input type="date" id="justFecha"></div>
+      <button class="btn-primario" onclick="buscarHistorialJustificar()">Buscar historial del mes</button>
     </div>
-    <div class="campo" style="max-width:500px;">
-      <label>Motivo</label>
-      <textarea id="justMotivo" rows="3" style="padding:9px; border:1px solid #ccc; border-radius:6px; font-size:14px;" placeholder="Ej: Cita médica, con constancia presentada."></textarea>
-    </div>
-    <button class="btn-primario" style="margin-top:12px;" onclick="registrarJustificacionUI()">Guardar justificación</button>
     <div id="justResultado"></div>
   </div>
 
-  <!-- TAB 3: REPORTES -->
+  <!-- ==================== TAB 3: REPORTES ==================== -->
   <div id="tabReportes" class="contenido-tab">
     <div class="fila-filtros">
-      <div class="campo"><label>ID del estudiante</label><input type="text" id="repId" placeholder="Ej: JAQ001"></div>
+      <div class="campo"><label>Grado</label>
+        <select id="repGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
+      </div>
+      <div class="campo"><label>Sección</label>
+        <select id="repSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </div>
       <div class="campo"><label>Desde</label><input type="date" id="repDesde"></div>
       <div class="campo"><label>Hasta</label><input type="date" id="repHasta"></div>
-      <button class="btn-primario" onclick="consultarReporte()">Ver reporte</button>
+      <button class="btn-primario" onclick="consultarReporteAula()">Ver reporte</button>
     </div>
+    <p class="nota-rango">Por defecto se muestra el mes actual.</p>
     <div id="repResultado"></div>
+    <div class="botones-export" id="repBotonesExport" style="display:none;">
+      <button class="btn-secundario" onclick="exportarReportePDF()">📄 Descargar PDF</button>
+      <button class="btn-secundario" onclick="exportarReporteExcel()">📊 Descargar Excel</button>
+    </div>
   </div>
 
-  <!-- TAB 4: ESTADÍSTICAS -->
+  <!-- ==================== TAB 4: ESTADÍSTICAS ==================== -->
   <div id="tabStats" class="contenido-tab">
+    <div class="sub-toggle">
+      <button id="btnNivelSeccion" class="activa" onclick="cambiarNivelStats('seccion')">Por sección</button>
+      <button id="btnNivelGrado" onclick="cambiarNivelStats('grado')">Por grado</button>
+      <button id="btnNivelGeneral" onclick="cambiarNivelStats('general')">General</button>
+    </div>
     <div class="fila-filtros">
+      <div class="campo" id="campoStatsGrado"><label>Grado</label>
+        <select id="statsGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
+      </div>
+      <div class="campo" id="campoStatsSeccion"><label>Sección</label>
+        <select id="statsSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </div>
       <div class="campo"><label>Fecha</label><input type="date" id="statsFecha"></div>
       <button class="btn-primario" onclick="consultarStats()">Ver estadísticas</button>
     </div>
@@ -181,21 +185,16 @@
 <script>
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwbFz2SlvxX-gbRIf9pjTBkgw4qZLZLwLicssIAKWYROEZqkDXaIguMiyXy3MkjsddC/exec";
   var USUARIO_ACTIVO = null;
+  var modoAsistencia = "estudiante";
+  var nivelStats = "seccion";
+  var ultimoReporteDatos = null; // para exportar PDF/Excel lo último consultado
 
-  function fechaHoyISO() {
-    var d = new Date();
-    var mes = String(d.getMonth() + 1).padStart(2, "0");
-    var dia = String(d.getDate()).padStart(2, "0");
-    return d.getFullYear() + "-" + mes + "-" + dia;
-  }
-  function isoADDMMYYYY(iso) {
-    if (!iso) return "";
-    var p = iso.split("-");
-    return p[2] + "/" + p[1] + "/" + p[0];
-  }
-  function claseCss(estado) {
-    return "e-" + String(estado || "").replace(/\s+/g, "-").replace("Ó", "O");
-  }
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function fechaISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function primerDiaMes() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function ultimoDiaMes() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+  function isoADDMMYYYY(iso) { if (!iso) return ""; var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
+  function claseCss(estado) { return "e-" + String(estado || "").replace(/\s+/g, "-").replace("Ó", "O"); }
 
   // ---------- Login ----------
   function guardarSesion(u) { sessionStorage.setItem("sesionApp1", JSON.stringify(u)); }
@@ -219,10 +218,7 @@
         guardarSesion(USUARIO_ACTIVO);
         mostrarPanel();
       })
-      .catch(function () {
-        document.getElementById("btnLogin").disabled = false;
-        err.textContent = "Error de conexión.";
-      });
+      .catch(function () { document.getElementById("btnLogin").disabled = false; err.textContent = "Error de conexión."; });
   }
 
   function mostrarPanel() {
@@ -232,20 +228,23 @@
     document.getElementById("textoSesion").textContent =
       USUARIO_ACTIVO.nombre + " (" + USUARIO_ACTIVO.rol + (USUARIO_ACTIVO.rol === "TUTOR" ? " - " + USUARIO_ACTIVO.seccionAsignada : "") + ")";
 
-    // Fechas por defecto: hoy
-    ["aulaFecha", "justFecha", "repDesde", "repHasta", "statsFecha"].forEach(function (id) {
-      document.getElementById(id).value = fechaHoyISO();
-    });
+    var pDesde = fechaISO(primerDiaMes()), pHasta = fechaISO(ultimoDiaMes()), pHoy = fechaISO(new Date());
+    document.getElementById("asisDesde").value = pDesde;
+    document.getElementById("asisHasta").value = pHasta;
+    document.getElementById("repDesde").value = pDesde;
+    document.getElementById("repHasta").value = pHasta;
+    document.getElementById("statsFecha").value = pHoy;
 
-    // Si es TUTOR, restringe grado/sección a la suya propia
     if (USUARIO_ACTIVO.rol === "TUTOR" && USUARIO_ACTIVO.seccionAsignada) {
       var partes = USUARIO_ACTIVO.seccionAsignada.trim().split(" ");
       var seccion = partes.pop();
       var grado = partes.join(" ");
-      var selGrado = document.getElementById("aulaGrado");
-      var selSeccion = document.getElementById("aulaSeccion");
-      selGrado.value = grado; selGrado.disabled = true;
-      selSeccion.value = seccion; selSeccion.disabled = true;
+      ["asisGrado", "repGrado", "statsGrado"].forEach(function (id) {
+        var el = document.getElementById(id); el.value = grado; el.disabled = true;
+      });
+      ["asisSeccion", "repSeccion", "statsSeccion"].forEach(function (id) {
+        var el = document.getElementById(id); el.value = seccion; el.disabled = true;
+      });
     }
   }
 
@@ -254,72 +253,36 @@
     document.querySelectorAll(".contenido-tab").forEach(function (t) { t.classList.toggle("activa", t.id === id); });
   }
 
-  // ---------- TAB 1: Asistencia por Aula ----------
-  function consultarAula() {
-    var fecha = isoADDMMYYYY(document.getElementById("aulaFecha").value);
-    var grado = document.getElementById("aulaGrado").value;
-    var seccion = document.getElementById("aulaSeccion").value;
-    var div = document.getElementById("aulaResultado");
-    div.innerHTML = "Cargando...";
-
-    fetch(WEBAPP_URL + "?accion=asistenciaDia&fecha=" + encodeURIComponent(fecha) + "&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-        if (data.estudiantes.length === 0) { div.innerHTML = "<p>No hay estudiantes activos en esa sección.</p>"; return; }
-
-        var html = "<table><thead><tr><th>ID</th><th>Nombre</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th></tr></thead><tbody>";
-        data.estudiantes.forEach(function (e) {
-          html += "<tr><td>" + e.id + "</td><td style='text-align:left;'>" + e.nombre + "</td>" +
-            "<td>" + (e.horaEntrada || "-") + "</td><td><span class='estado " + claseCss(e.estadoEntrada) + "'>" + e.estadoEntrada + "</span></td>" +
-            "<td>" + (e.horaSalida || "-") + "</td><td><span class='estado " + claseCss(e.estadoSalida) + "'>" + e.estadoSalida + "</span></td></tr>";
-        });
-        html += "</tbody></table>";
-        div.innerHTML = html;
-      })
-      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  // ==================== TAB 1: ASISTENCIA ====================
+  function cambiarModoAsistencia(modo) {
+    modoAsistencia = modo;
+    document.getElementById("btnModoEstudiante").classList.toggle("activa", modo === "estudiante");
+    document.getElementById("btnModoAula").classList.toggle("activa", modo === "aula");
+    document.getElementById("campoAsisId").style.display = (modo === "estudiante") ? "flex" : "none";
+    document.getElementById("campoAsisGrado").style.display = (modo === "aula") ? "flex" : "none";
+    document.getElementById("campoAsisSeccion").style.display = (modo === "aula") ? "flex" : "none";
+    document.getElementById("asisResultado").innerHTML = "";
   }
 
-  // ---------- TAB 2: Justificaciones ----------
-  function registrarJustificacionUI() {
-    var id = document.getElementById("justId").value.trim();
-    var fecha = isoADDMMYYYY(document.getElementById("justFecha").value);
-    var motivo = document.getElementById("justMotivo").value.trim();
-    var div = document.getElementById("justResultado");
-    div.innerHTML = "";
-
-    if (!id || !motivo) { div.innerHTML = "<div class='mensaje-error'>Complete el ID y el motivo.</div>"; return; }
-
-    var url = WEBAPP_URL + "?accion=justificar&id=" + encodeURIComponent(id) + "&fecha=" + encodeURIComponent(fecha) +
-      "&motivo=" + encodeURIComponent(motivo) + "&usuario=" + encodeURIComponent(USUARIO_ACTIVO.nombre);
-
-    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
-      div.innerHTML = "<div class='" + (data.ok ? "mensaje-ok" : "mensaje-error") + "'>" + (data.mensaje || "") + "</div>";
-      if (data.ok) {
-        document.getElementById("justId").value = "";
-        document.getElementById("justMotivo").value = "";
-      }
-    }).catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  function consultarAsistencia() {
+    if (modoAsistencia === "estudiante") consultarAsistenciaEstudiante();
+    else consultarAsistenciaAula();
   }
 
-  // ---------- TAB 3: Reportes ----------
-  function consultarReporte() {
-    var id = document.getElementById("repId").value.trim();
-    var desde = isoADDMMYYYY(document.getElementById("repDesde").value);
-    var hasta = isoADDMMYYYY(document.getElementById("repHasta").value);
-    var div = document.getElementById("repResultado");
-    div.innerHTML = "Cargando...";
-
+  function consultarAsistenciaEstudiante() {
+    var id = document.getElementById("asisId").value.trim();
+    var desde = isoADDMMYYYY(document.getElementById("asisDesde").value);
+    var hasta = isoADDMMYYYY(document.getElementById("asisHasta").value);
+    var div = document.getElementById("asisResultado");
     if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
+    div.innerHTML = "Cargando...";
 
     fetch(WEBAPP_URL + "?accion=reporteEstudiante&id=" + encodeURIComponent(id) + "&desde=" + encodeURIComponent(desde) + "&hasta=" + encodeURIComponent(hasta))
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-
         var html = "<p><strong>" + data.estudiante.nombre + "</strong> — " + data.estudiante.grado + " \"" + data.estudiante.seccion + "\"</p>";
         if (data.registros.length === 0) { html += "<p>No hay registros en ese rango.</p>"; div.innerHTML = html; return; }
-
         html += "<table><thead><tr><th>Fecha</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th><th>Justificado por</th></tr></thead><tbody>";
         data.registros.forEach(function (r) {
           html += "<tr><td>" + r.fecha + "</td><td>" + (r.horaEntrada || "-") + "</td>" +
@@ -333,32 +296,209 @@
       .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
   }
 
-  // ---------- TAB 4: Estadísticas ----------
+  function consultarAsistenciaAula() {
+    var grado = document.getElementById("asisGrado").value;
+    var seccion = document.getElementById("asisSeccion").value;
+    var desdeISO = document.getElementById("asisDesde").value;
+    var hastaISO = document.getElementById("asisHasta").value;
+    var div = document.getElementById("asisResultado");
+    div.innerHTML = "Cargando...";
+
+    if (desdeISO === hastaISO) {
+      fetch(WEBAPP_URL + "?accion=asistenciaDia&fecha=" + encodeURIComponent(isoADDMMYYYY(desdeISO)) + "&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+          if (data.estudiantes.length === 0) { div.innerHTML = "<p>No hay estudiantes activos en esa sección.</p>"; return; }
+          var html = "<table><thead><tr><th>ID</th><th>Nombre</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th></tr></thead><tbody>";
+          data.estudiantes.forEach(function (e) {
+            html += "<tr><td>" + e.id + "</td><td style='text-align:left;'>" + e.nombre + "</td>" +
+              "<td>" + (e.horaEntrada || "-") + "</td><td><span class='estado " + claseCss(e.estadoEntrada) + "'>" + e.estadoEntrada + "</span></td>" +
+              "<td>" + (e.horaSalida || "-") + "</td><td><span class='estado " + claseCss(e.estadoSalida) + "'>" + e.estadoSalida + "</span></td></tr>";
+          });
+          html += "</tbody></table>";
+          div.innerHTML = html;
+        })
+        .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+    } else {
+      renderResumenAula(grado, seccion, isoADDMMYYYY(desdeISO), isoADDMMYYYY(hastaISO), div, null);
+    }
+  }
+
+  function renderResumenAula(grado, seccion, desde, hasta, divDestino, callbackDatos) {
+    divDestino.innerHTML = "Cargando...";
+    fetch(WEBAPP_URL + "?accion=resumenAula&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion) + "&desde=" + encodeURIComponent(desde) + "&hasta=" + encodeURIComponent(hasta))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { divDestino.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        if (data.estudiantes.length === 0) { divDestino.innerHTML = "<p>No hay estudiantes activos en esa sección.</p>"; return; }
+
+        var html = "<table><thead><tr><th>ID</th><th>Nombre</th><th>Puntual</th><th>Tarde</th><th>Falta</th><th>Salida OK</th><th>Fuera Horario</th><th>Justificados</th></tr></thead><tbody>";
+        data.estudiantes.forEach(function (e) {
+          html += "<tr><td>" + e.id + "</td><td style='text-align:left;'>" + e.nombre + "</td>" +
+            "<td>" + e.puntual + "</td><td>" + e.tarde + "</td><td>" + e.falta + "</td>" +
+            "<td>" + e.salidaOk + "</td><td>" + e.fueraDeHorario + "</td><td>" + e.justificados + "</td></tr>";
+        });
+        html += "</tbody></table>";
+        divDestino.innerHTML = html;
+        if (callbackDatos) callbackDatos(data);
+      })
+      .catch(function () { divDestino.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  // ==================== TAB 2: JUSTIFICACIONES ====================
+  function buscarHistorialJustificar() {
+    var id = document.getElementById("justId").value.trim();
+    var div = document.getElementById("justResultado");
+    if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
+    div.innerHTML = "Cargando...";
+
+    var desde = isoADDMMYYYY(fechaISO(primerDiaMes()));
+    var hasta = isoADDMMYYYY(fechaISO(ultimoDiaMes()));
+
+    fetch(WEBAPP_URL + "?accion=reporteEstudiante&id=" + encodeURIComponent(id) + "&desde=" + encodeURIComponent(desde) + "&hasta=" + encodeURIComponent(hasta))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        var html = "<p><strong>" + data.estudiante.nombre + "</strong> — " + data.estudiante.grado + " \"" + data.estudiante.seccion + "\" — historial del mes</p>";
+        if (data.registros.length === 0) { html += "<p>No hay registros este mes.</p>"; div.innerHTML = html; return; }
+
+        html += "<table><thead><tr><th>Fecha</th><th>Estado Entrada</th><th>Estado Salida</th><th>Justificación</th></tr></thead><tbody>";
+        data.registros.forEach(function (r, idx) {
+          var necesitaJustificar = (r.estadoEntrada === "TARDE" || r.estadoEntrada === "FALTA");
+          var yaJustificado = !!r.justificadoPor;
+          var accionHtml;
+          if (yaJustificado) {
+            accionHtml = "<span style='color:#1a7a3a;'>✓ " + r.justificadoPor + "</span>";
+          } else if (necesitaJustificar) {
+            accionHtml = "<button class='btn-mini' onclick='toggleFilaJustificar(" + idx + ")'>Justificar</button>";
+          } else {
+            accionHtml = "-";
+          }
+
+          html += "<tr><td>" + r.fecha + "</td>" +
+            "<td><span class='estado " + claseCss(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
+            "<td><span class='estado " + claseCss(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>" +
+            "<td>" + accionHtml + "</td></tr>";
+
+          if (necesitaJustificar && !yaJustificado) {
+            html += "<tr class='fila-justificar' id='filaJust" + idx + "'><td colspan='4'>" +
+              "<textarea id='motivoJust" + idx + "' rows='2' placeholder='Motivo de la justificación...'></textarea><br>" +
+              "<button class='btn-mini' style='margin-top:6px;' onclick='guardarJustificacionFila(\"" + id + "\", \"" + r.fecha + "\", " + idx + ")'>Guardar</button>" +
+              "</td></tr>";
+          }
+        });
+        html += "</tbody></table>";
+        div.innerHTML = html;
+      })
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  function toggleFilaJustificar(idx) {
+    var fila = document.getElementById("filaJust" + idx);
+    fila.style.display = (fila.style.display === "table-row") ? "none" : "table-row";
+  }
+
+  function guardarJustificacionFila(id, fecha, idx) {
+    var motivo = document.getElementById("motivoJust" + idx).value.trim();
+    if (!motivo) { alert("Escribe el motivo antes de guardar."); return; }
+
+    var url = WEBAPP_URL + "?accion=justificar&id=" + encodeURIComponent(id) + "&fecha=" + encodeURIComponent(fecha) +
+      "&motivo=" + encodeURIComponent(motivo) + "&usuario=" + encodeURIComponent(USUARIO_ACTIVO.nombre);
+
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.ok) { buscarHistorialJustificar(); } else { alert(data.mensaje || "No se pudo guardar."); }
+    }).catch(function () { alert("Error de conexión."); });
+  }
+
+  // ==================== TAB 3: REPORTES ====================
+  function consultarReporteAula() {
+    var grado = document.getElementById("repGrado").value;
+    var seccion = document.getElementById("repSeccion").value;
+    var desde = isoADDMMYYYY(document.getElementById("repDesde").value);
+    var hasta = isoADDMMYYYY(document.getElementById("repHasta").value);
+    var div = document.getElementById("repResultado");
+
+    renderResumenAula(grado, seccion, desde, hasta, div, function (data) {
+      ultimoReporteDatos = data;
+      document.getElementById("repBotonesExport").style.display = "flex";
+    });
+  }
+
+  function exportarReporteExcel() {
+    if (!ultimoReporteDatos) return;
+    var filas = [["ID", "Nombre", "Puntual", "Tarde", "Falta", "Salida OK", "Fuera Horario", "Justificados"]];
+    ultimoReporteDatos.estudiantes.forEach(function (e) {
+      filas.push([e.id, e.nombre, e.puntual, e.tarde, e.falta, e.salidaOk, e.fueraDeHorario, e.justificados]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+    var nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" +
+      ultimoReporteDatos.desde.replace(/\//g, "-") + "_a_" + ultimoReporteDatos.hasta.replace(/\//g, "-") + ".xlsx";
+    XLSX.writeFile(wb, nombreArchivo);
+  }
+
+  function exportarReportePDF() {
+    if (!ultimoReporteDatos) return;
+    var doc = new jspdf.jsPDF();
+    doc.setFontSize(13);
+    doc.text("I.E.P. José Abelardo Quiñones Gonzales", 14, 15);
+    doc.setFontSize(10);
+    doc.text("Reporte de asistencia — " + ultimoReporteDatos.grado + " \"" + ultimoReporteDatos.seccion + "\"", 14, 22);
+    doc.text("Del " + ultimoReporteDatos.desde + " al " + ultimoReporteDatos.hasta, 14, 28);
+
+    var filas = ultimoReporteDatos.estudiantes.map(function (e) {
+      return [e.id, e.nombre, e.puntual, e.tarde, e.falta, e.salidaOk, e.fueraDeHorario, e.justificados];
+    });
+
+    doc.autoTable({
+      startY: 34,
+      head: [["ID", "Nombre", "Puntual", "Tarde", "Falta", "Salida OK", "Fuera Horario", "Justificados"]],
+      body: filas,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [30, 58, 95] }
+    });
+
+    var nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" +
+      ultimoReporteDatos.desde.replace(/\//g, "-") + "_a_" + ultimoReporteDatos.hasta.replace(/\//g, "-") + ".pdf";
+    doc.save(nombreArchivo);
+  }
+
+  // ==================== TAB 4: ESTADÍSTICAS ====================
+  function cambiarNivelStats(nivel) {
+    nivelStats = nivel;
+    document.getElementById("btnNivelSeccion").classList.toggle("activa", nivel === "seccion");
+    document.getElementById("btnNivelGrado").classList.toggle("activa", nivel === "grado");
+    document.getElementById("btnNivelGeneral").classList.toggle("activa", nivel === "general");
+    document.getElementById("campoStatsGrado").style.display = (nivel === "general") ? "none" : "flex";
+    document.getElementById("campoStatsSeccion").style.display = (nivel === "seccion") ? "flex" : "none";
+    document.getElementById("statsResultado").innerHTML = "";
+  }
+
   function consultarStats() {
     var fecha = isoADDMMYYYY(document.getElementById("statsFecha").value);
+    var grado = (nivelStats !== "general") ? document.getElementById("statsGrado").value : "";
+    var seccion = (nivelStats === "seccion") ? document.getElementById("statsSeccion").value : "";
     var div = document.getElementById("statsResultado");
     div.innerHTML = "Cargando...";
 
-    var grado = null, seccion = null;
-    if (USUARIO_ACTIVO.rol === "TUTOR" && USUARIO_ACTIVO.seccionAsignada) {
-      var partes = USUARIO_ACTIVO.seccionAsignada.trim().split(" ");
-      seccion = partes.pop();
-      grado = partes.join(" ");
-    }
-
-    var url = WEBAPP_URL + "?accion=estadisticasDia&fecha=" + encodeURIComponent(fecha);
-    if (grado) url += "&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion);
+    var url = WEBAPP_URL + "?accion=estadisticasNivel&fecha=" + encodeURIComponent(fecha) + "&nivel=" + encodeURIComponent(nivelStats);
+    if (grado) url += "&grado=" + encodeURIComponent(grado);
+    if (seccion) url += "&seccion=" + encodeURIComponent(seccion);
 
     fetch(url).then(function (r) { return r.json(); }).then(function (data) {
       if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-      var c = data.conteo;
-      var html = "<div class='tarjetas-stats'>";
-      var etiquetas = [
-        ["PUNTUAL", "Puntual"], ["TARDE", "Tarde"], ["FALTA", "Falta"],
-        ["SALIDA OK", "Salida OK"], ["FUERA DE HORARIO", "Fuera de horario"], ["NO REGISTRÓ SALIDA", "No registró salida"]
+      var c = data.conteo, p = data.porcentajes;
+      var html = "<p style='font-size:13px; color:#555;'>Total de estudiantes en el ámbito: <strong>" + data.total + "</strong></p>";
+      html += "<div class='tarjetas-stats'>";
+      var items = [
+        ["puntual", "Puntual"], ["tarde", "Tardanza"], ["falta", "Falta"], ["justificados", "Justificadas"]
       ];
-      etiquetas.forEach(function (e) {
-        html += "<div class='tarjeta-stat'><div class='numero'>" + (c[e[0]] || 0) + "</div><div class='etiqueta'>" + e[1] + "</div></div>";
+      items.forEach(function (it) {
+        html += "<div class='tarjeta-stat'><div class='numero'>" + c[it[0]] + "</div>" +
+          "<div class='porcentaje'>" + p[it[0]] + "%</div>" +
+          "<div class='etiqueta'>" + it[1] + "</div></div>";
       });
       html += "</div>";
       div.innerHTML = html;
