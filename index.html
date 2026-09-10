@@ -31,22 +31,14 @@
   #vistaCarga { display: flex; }
 
   #vistaLogin { display: none; }
-  #vistaLogin .caja {
-    background: rgba(255,255,255,0.08); border-radius: 14px; padding: 26px 24px;
-    width: 300px; max-width: 85vw;
-  }
+  #vistaLogin .caja { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 26px 24px; width: 300px; max-width: 85vw; }
   #vistaLogin h2 { margin: 0 0 16px; font-size: 17px; }
   #vistaLogin input { width: 100%; padding: 11px; margin-top: 8px; border: none; border-radius: 6px; font-size: 14px; }
-  #vistaLogin button {
-    width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px;
-    background: #d9a13c; color: #1e3a5f; font-weight: bold; font-size: 15px; cursor: pointer;
-  }
+  #vistaLogin button { width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px; background: #d9a13c; color: #1e3a5f; font-weight: bold; font-size: 15px; cursor: pointer; }
   #vistaLogin button:disabled { opacity: 0.6; }
   #errorLogin { color: #ffb3b3; font-size: 13px; margin-top: 10px; min-height: 16px; }
 
-  #vistaEscaneo {
-    display: none; position: fixed; top:0; left:0; right:0; bottom:0; padding:0; justify-content:flex-start;
-  }
+  #vistaEscaneo { display: none; position: fixed; top:0; left:0; right:0; bottom:0; padding:0; justify-content:flex-start; }
   #lector { width: 100vw !important; height: 100vh !important; overflow: hidden; }
   #lector > div { width: 100% !important; height: 100% !important; }
   #lector video { width: 100% !important; height: 100% !important; object-fit: cover !important; transform: scaleX(-1); -webkit-transform: scaleX(-1); }
@@ -61,22 +53,15 @@
   }
   #sesionActiva { font-size: 12px; opacity: 0.9; }
   #debugInfo { font-size: 11px; opacity: 0.85; margin-top: 4px; word-break: break-word; }
-  #btnReiniciar {
-    margin-top: 8px; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none;
+  #btnReiniciar, #btnResetearTodo {
+    margin-top: 6px; margin-right: 6px; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none;
     background: rgba(255,255,255,0.2); color: #fff; cursor: pointer;
   }
+  #btnResetearTodo { display: none; background: rgba(192,57,43,0.6); }
   #btnCerrarSesion {
     position: absolute; bottom: 10px; right: 16px; z-index: 6;
     font-size: 11px; opacity: 0.6; color: #fff; background: none; border: none; cursor: pointer;
   }
-
-  #vistaVerificando { display: none; }
-  .spinner {
-    width: 60px; height: 60px; border: 5px solid rgba(255,255,255,0.25);
-    border-top-color: #fff; border-radius: 50%; animation: girar 0.8s linear infinite;
-    margin-bottom: 16px;
-  }
-  @keyframes girar { to { transform: rotate(360deg); } }
 
   #vistaResultado { display: none; }
   .icono-resultado {
@@ -116,6 +101,9 @@
     <button id="btnLogin" onclick="intentarLogin()">Ingresar</button>
     <div id="errorLogin"></div>
   </div>
+  <div style="font-size:11px; opacity:0.6; margin-top:18px; text-align:center;">
+    Desarrollado por: José Carlos Huamaní Quicaño · Cel. 954 000 684 · JECKAM Academy © 2026
+  </div>
 </div>
 
 <div class="pantalla" id="vistaEscaneo">
@@ -124,14 +112,9 @@
   <div id="panelTop">
     <div id="sesionActiva"></div>
     <div id="debugInfo"></div>
-    <button id="btnReiniciar" onclick="location.reload()">Recargar CONFIG del Sheet</button>
-    <button id="btnResetearTodo" onclick="resetearTodo()" style="display:none; margin-top:6px; font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:rgba(192,57,43,0.6); color:#fff; cursor:pointer;">⚠️ Resetear todo</button>
+    <button id="btnReiniciar" onclick="location.reload()">Recargar CONFIG</button>
+    <button id="btnResetearTodo" onclick="resetearTodo()">⚠️ Resetear todo</button>
   </div>
-</div>
-
-<div class="pantalla" id="vistaVerificando">
-  <div class="spinner"></div>
-  <p>Verificando con el servidor...</p>
 </div>
 
 <div class="pantalla" id="vistaResultado">
@@ -140,6 +123,7 @@
   <div id="detalleEstudiante">—</div>
   <div id="estadoTexto">—</div>
   <div id="contadorReset"></div>
+  <div style="font-size:10px; opacity:0.4; margin-top:16px;">José Carlos Huamaní Quicaño · 954 000 684 · JECKAM Academy © 2026</div>
 </div>
 
 <button id="btnCerrarSesion" onclick="cerrarSesion()">Cerrar sesión</button>
@@ -149,38 +133,27 @@
 
   var procesando = false;
   var html5QrcodeScanner;
+  var CFG = null;
   var USUARIO_ACTIVO = null;
+  var ultimoIdMostrado = null;
+  var timeoutResumen = null;
+
+  // ---------- Utilidades de hora local ----------
+  function minutosDesdeTexto(txt) { var p = String(txt).split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+  function horaActualMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+  function horaActualTexto() {
+    var d = new Date();
+    return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+  }
+  function fechaHoyClave() { var d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
 
   // ---------- Sesión ----------
-  function guardarSesion(usuario) { sessionStorage.setItem("sesionAdmin", JSON.stringify(usuario)); }
-  function leerSesion() {
-    var s = sessionStorage.getItem("sesionAdmin");
-    return s ? JSON.parse(s) : null;
-  }
+  function guardarSesion(u) { sessionStorage.setItem("sesionAdmin", JSON.stringify(u)); }
+  function leerSesion() { var s = sessionStorage.getItem("sesionAdmin"); return s ? JSON.parse(s) : null; }
   function cerrarSesion() {
     sessionStorage.removeItem("sesionAdmin");
     if (html5QrcodeScanner) { html5QrcodeScanner.stop().catch(function(){}); }
     location.reload();
-  }
-
-  // Borra TODOS los registros de asistencia (Sheet) y fuerza recargar la versión
-  // más reciente del código, sin caché. Solo visible para usuarios ADMIN logueados.
-  function resetearTodo() {
-    if (!confirm("¿Seguro? Esto borra TODOS los registros de asistencia y recarga el sistema desde cero.")) return;
-
-    var rol = USUARIO_ACTIVO ? USUARIO_ACTIVO.rol : "";
-    fetch(WEBAPP_URL + "?accion=resetearTodo&rol=" + encodeURIComponent(rol))
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        alert(data.mensaje || "Listo.");
-        sessionStorage.clear();
-        localStorage.clear();
-        // Cache-busting: fuerza al navegador a pedir el archivo de nuevo, ignorando caché
-        location.href = location.pathname + "?cb=" + Date.now();
-      })
-      .catch(function (err) {
-        alert("Error al resetear: " + err.message);
-      });
   }
 
   function intentarLogin() {
@@ -192,27 +165,60 @@
 
     document.getElementById("btnLogin").disabled = true;
     fetch(WEBAPP_URL + "?accion=login&nombre=" + encodeURIComponent(nombre) + "&dni=" + encodeURIComponent(dni))
-      .then(function (res) { return res.json(); })
+      .then(function (r) { return r.json(); })
       .then(function (data) {
         document.getElementById("btnLogin").disabled = false;
         if (!data.ok) { err.textContent = data.mensaje || "Usuario o clave incorrectos."; return; }
-        if (data.usuario.rol !== "ADMIN" && data.usuario.rol !== "SUPERADMIN") { err.textContent = "Solo el personal ADMIN puede operar el escáner."; return; }
+        if (data.usuario.rol !== "ADMIN" && data.usuario.rol !== "SUPERADMIN") {
+          err.textContent = "Solo el personal ADMIN puede operar el escáner."; return;
+        }
         USUARIO_ACTIVO = data.usuario;
         guardarSesion(USUARIO_ACTIVO);
-        mostrarPantallaEscaneo();
+        cargarConfig();
       })
-      .catch(function () {
-        document.getElementById("btnLogin").disabled = false;
-        err.textContent = "Error de conexión. Intente nuevamente.";
-      });
+      .catch(function () { document.getElementById("btnLogin").disabled = false; err.textContent = "Error de conexión."; });
+  }
+
+  // ---------- Registro local del día (rápido, con autocorrección desde el servidor) ----------
+  function getRegistrosHoy() {
+    var clave = "asistencia_" + fechaHoyClave();
+    var datos = localStorage.getItem(clave);
+    return datos ? JSON.parse(datos) : {};
+  }
+  function guardarRegistroHoy(idQR, tipo) {
+    var clave = "asistencia_" + fechaHoyClave();
+    var registros = getRegistrosHoy();
+    registros[idQR] = registros[idQR] || {};
+    registros[idQR][tipo] = true;
+    localStorage.setItem(clave, JSON.stringify(registros));
+  }
+  function deshacerRegistroLocal(idQR, tipo) {
+    var clave = "asistencia_" + fechaHoyClave();
+    var registros = getRegistrosHoy();
+    if (registros[idQR]) { delete registros[idQR][tipo]; localStorage.setItem(clave, JSON.stringify(registros)); }
+  }
+
+  // ---------- CONFIG (una sola vez al abrir; botón manual para recargar) ----------
+  function cargarConfig() {
+    document.getElementById("vistaLogin").style.display = "none";
+    document.getElementById("vistaCarga").style.display = "flex";
+    fetch(WEBAPP_URL + "?accion=obtenerConfigPublica")
+      .then(function (r) { return r.json(); })
+      .then(function (data) { CFG = data.ok ? data.config : configPorDefecto(); mostrarPantallaEscaneo(); })
+      .catch(function () { CFG = configPorDefecto(); mostrarPantallaEscaneo(); });
+  }
+  function configPorDefecto() {
+    return { HORA_PUNTUAL_DESDE: "00:00", HORA_PUNTUAL_HASTA: "12:43", HORA_TARDE_HASTA: "13:59",
+             HORA_SALIDA_DESDE: "18:16", HORA_SALIDA_HASTA: "18:45" };
   }
 
   function mostrarPantallaEscaneo() {
     document.getElementById("vistaCarga").style.display = "none";
-    document.getElementById("vistaLogin").style.display = "none";
     document.getElementById("vistaEscaneo").style.display = "flex";
     document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
-    document.getElementById("debugInfo").textContent = "Listo para escanear.";
+    document.getElementById("debugInfo").textContent =
+      "PUNTUAL " + CFG.HORA_PUNTUAL_DESDE + "-" + CFG.HORA_PUNTUAL_HASTA + " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
+      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA;
     if (USUARIO_ACTIVO.rol === "SUPERADMIN") {
       document.getElementById("btnResetearTodo").style.display = "inline-block";
     }
@@ -230,32 +236,24 @@
   // ---------- Cámara ----------
   function iniciarEscaner() {
     html5QrcodeScanner = new Html5Qrcode("lector");
-    var config = {
-      fps: 20,
-      // Sin qrbox: toda la pantalla es zona activa de escaneo (sin recuadro oscurecido)
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-    };
+    var config = { fps: 20, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
     html5QrcodeScanner.start({ facingMode: "user" }, config, onEscaneoExitoso, function () {})
       .then(forzarVideoPantallaCompleta)
       .catch(function () {
         Html5Qrcode.getCameras().then(function (camaras) {
           if (camaras && camaras.length) {
-            html5QrcodeScanner.start(camaras[0].id, config, onEscaneoExitoso, function () {})
-              .then(forzarVideoPantallaCompleta);
+            html5QrcodeScanner.start(camaras[0].id, config, onEscaneoExitoso, function () {}).then(forzarVideoPantallaCompleta);
           }
         });
       });
   }
 
-  // Fuerza por JavaScript (máxima prioridad, gana a cualquier estilo puesto por la librería)
-  // que el <video> real ocupe toda la pantalla, sin importar la resolución nativa de la cámara.
   function forzarVideoPantallaCompleta() {
     setTimeout(function () {
       var contenedor = document.getElementById("lector");
       var video = contenedor ? contenedor.querySelector("video") : null;
       if (video) {
-        video.removeAttribute("width");
-        video.removeAttribute("height");
+        video.removeAttribute("width"); video.removeAttribute("height");
         video.style.setProperty("width", "100vw", "important");
         video.style.setProperty("height", "100vh", "important");
         video.style.setProperty("object-fit", "cover", "important");
@@ -263,12 +261,10 @@
         video.style.setProperty("top", "0", "important");
         video.style.setProperty("left", "0", "important");
       }
-      // También algunos divs internos que la librería crea con tamaño fijo
       if (contenedor) {
-        var hijos = contenedor.querySelectorAll("div");
-        hijos.forEach(function (div) {
-          div.style.setProperty("width", "100%", "important");
-          div.style.setProperty("height", "100%", "important");
+        contenedor.querySelectorAll("div").forEach(function (d) {
+          d.style.setProperty("width", "100%", "important");
+          d.style.setProperty("height", "100%", "important");
         });
       }
     }, 300);
@@ -277,27 +273,105 @@
   function onEscaneoExitoso(idDetectado) {
     if (procesando) return;
     var idQR = idDetectado.trim().toUpperCase();
-    if (idQR === ultimoIdMostrado) return; // evita doble lectura del mismo carnet sin moverlo
+    if (idQR === ultimoIdMostrado) return;
     procesando = true;
+    procesarLocalmente(idQR);
+  }
+
+  // ---------- Lógica local INSTANTÁNEA (igual que la fórmula del Sheet) ----------
+  function procesarLocalmente(idQR) {
     ultimoIdMostrado = idQR;
+    var registrosHoy = getRegistrosHoy();
+    var yaTieneEntrada = registrosHoy[idQR] && registrosHoy[idQR]["ENTRADA"];
+    var yaTieneSalida = registrosHoy[idQR] && registrosHoy[idQR]["SALIDA"];
+    var minActual = horaActualMin();
+    var horaTxt = horaActualTexto();
 
-    // Muestra "Verificando..." al instante mientras espera la respuesta real del servidor
-    mostrarVerificando(idQR);
+    if (yaTieneSalida) {
+      mostrarResultado({ ok: false, mensaje: "Ya registraste tu entrada y salida hoy." }, idQR);
+      return;
+    }
 
+    if (!yaTieneEntrada) {
+      var puntualDesde = minutosDesdeTexto(CFG.HORA_PUNTUAL_DESDE);
+      if (minActual < puntualDesde) {
+        mostrarResultado({ ok: false, mensaje: "AÚN NO ES HORA DE INGRESAR" }, idQR);
+        return;
+      }
+      var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
+      var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
+
+      if (minActual > tardeHasta) {
+        mostrarResultado({ ok: false, mensaje: "YA ES MUY TARDE, JUSTIFICA CON TU AUXILIAR" }, idQR);
+        return;
+      }
+
+      var estado = (minActual <= puntualHasta) ? "PUNTUAL" : "TARDE";
+      guardarRegistroHoy(idQR, "ENTRADA");
+      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, hora: horaTxt }, idQR);
+      enviarAlServidorEnSegundoPlano(idQR, "ENTRADA", estado);
+
+    } else {
+      var salidaDesde = minutosDesdeTexto(CFG.HORA_SALIDA_DESDE);
+      var salidaHasta = minutosDesdeTexto(CFG.HORA_SALIDA_HASTA);
+
+      if (minActual < salidaDesde) {
+        mostrarResultado({ ok: false, mensaje: "AÚN NO TERMINÓ TUS CLASES" }, idQR);
+        return;
+      }
+      var estadoSalida = (minActual <= salidaHasta) ? "SALIDA OK" : "FUERA DE HORARIO";
+      var mensajeSalida = (estadoSalida === "SALIDA OK") ? "MARCÓ SALIDA" : "MARCÓ FUERA DE HORARIO";
+      guardarRegistroHoy(idQR, "SALIDA");
+      mostrarResultado({ ok: true, tipo: "SALIDA", estado: estadoSalida, mensaje: mensajeSalida, hora: horaTxt }, idQR);
+      enviarAlServidorEnSegundoPlano(idQR, "SALIDA", estadoSalida);
+    }
+  }
+
+  // Envía el registro real en segundo plano y AUTOCORRIGE si el servidor determinó algo distinto
+  function enviarAlServidorEnSegundoPlano(idQR, tipoEsperado, estadoMostrado) {
+    var dbg = document.getElementById("debugInfo");
     fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
-      .then(function (res) { return res.json(); })
+      .then(function (r) { return r.json(); })
       .then(function (data) {
-        document.getElementById("debugInfo").textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
-        mostrarResultadoReal(idQR, data);
+        if (dbg) dbg.textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
+        if (data.ok && data.tipo) {
+          if (data.tipo !== tipoEsperado) deshacerRegistroLocal(idQR, tipoEsperado);
+          guardarRegistroHoy(idQR, data.tipo);
+          if (data.tipo !== tipoEsperado || data.estado !== estadoMostrado) {
+            corregirEstadoEnPantalla(idQR, data.estado, data.tipo, data.mensaje);
+          }
+        } else if (!data.ok) {
+          deshacerRegistroLocal(idQR, tipoEsperado);
+        }
       })
       .catch(function (err) {
-        document.getElementById("debugInfo").textContent = "ERROR DE RED (" + idQR + "): " + err.message;
-        mostrarResultadoReal(idQR, { ok: false, mensaje: "Error de conexión" });
+        if (dbg) dbg.textContent = "ERROR DE RED (" + idQR + "): " + err.message;
+        deshacerRegistroLocal(idQR, tipoEsperado);
       });
   }
 
-  var ultimoIdMostrado = null;
-  var timeoutResumen = null;
+  function corregirEstadoEnPantalla(idQR, estadoReal, tipoReal, mensajeReal) {
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    if (document.getElementById("vistaResultado").style.display !== "flex") return;
+    if (!nombreDiv || nombreDiv.textContent !== idQR) return;
+
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    var detalleDiv = document.getElementById("detalleEstudiante");
+    var cls = claseEstado(estadoReal);
+
+    icono.className = "icono-resultado";
+    icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
+    icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
+
+    estadoDiv.className = "";
+    estadoDiv.classList.add("fondo-" + cls);
+    estadoDiv.textContent = ((tipoReal === "SALIDA" && mensajeReal) ? mensajeReal : estadoReal) + " (corregido)";
+
+    if (tipoReal && detalleDiv) {
+      detalleDiv.textContent = (tipoReal === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA") + " — corregido por el servidor";
+    }
+  }
 
   function claseEstado(estado) {
     if (estado === "PUNTUAL" || estado === "SALIDA OK") return "ok";
@@ -306,26 +380,10 @@
     return "error";
   }
 
-  function mostrarVerificando(idQR) {
+  function mostrarResultado(data, idQR) {
     document.getElementById("vistaEscaneo").style.display = "none";
     document.getElementById("vistaResultado").style.display = "flex";
 
-    var icono = document.getElementById("iconoResultado");
-    var estadoDiv = document.getElementById("estadoTexto");
-    var nombreDiv = document.getElementById("nombreEstudiante");
-    var detalleDiv = document.getElementById("detalleEstudiante");
-
-    icono.className = "icono-resultado icono-error";
-    icono.textContent = "…";
-    nombreDiv.textContent = idQR;
-    detalleDiv.textContent = "Verificando...";
-    estadoDiv.className = "fondo-error";
-    estadoDiv.textContent = "";
-    document.getElementById("contadorReset").textContent = "";
-  }
-
-  // Muestra el estado REAL que devolvió el servidor (PUNTUAL/TARDE/FALTA/SALIDA OK/FUERA DE HORARIO/rechazo)
-  function mostrarResultadoReal(idQR, data) {
     var icono = document.getElementById("iconoResultado");
     var estadoDiv = document.getElementById("estadoTexto");
     var nombreDiv = document.getElementById("nombreEstudiante");
@@ -345,35 +403,44 @@
       var cls = claseEstado(data.estado);
       icono.classList.add(cls === "ok" ? "icono-ok" : cls === "tarde" ? "icono-tarde" : "icono-falta");
       icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
-      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA" : "Registro de SALIDA");
+      detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA — " : "Registro de SALIDA — ") + data.hora;
       estadoDiv.classList.add("fondo-" + cls);
       estadoDiv.textContent = (data.tipo === "SALIDA" && data.mensaje) ? data.mensaje : data.estado;
     }
 
     if (timeoutResumen) clearTimeout(timeoutResumen);
-    timeoutResumen = setTimeout(volverAEscanear, 1000); // se lee rápido pero se alcanza a ver el estado real
+    document.getElementById("contadorReset").textContent = "";
+    timeoutResumen = setTimeout(volverAEscanear, 900);
   }
 
   function volverAEscanear() {
     document.getElementById("vistaResultado").style.display = "none";
     document.getElementById("vistaEscaneo").style.display = "flex";
     procesando = false;
-    // Libera el "último ID" después de un momento, para permitir volver a escanear
-    // el mismo carnet más tarde (ej. a la hora de salida) sin bloquear el sistema.
-    setTimeout(function () { ultimoIdMostrado = null; }, 3000);
+    setTimeout(function () { ultimoIdMostrado = null; }, 2000);
     html5QrcodeScanner.resume();
+  }
+
+  // ---------- SUPERADMIN: Resetear todo ----------
+  function resetearTodo() {
+    if (!confirm("¿Seguro? Esto borra TODOS los registros de asistencia y recarga el sistema desde cero.")) return;
+    var rol = USUARIO_ACTIVO ? USUARIO_ACTIVO.rol : "";
+    fetch(WEBAPP_URL + "?accion=resetearTodo&rol=" + encodeURIComponent(rol))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        alert(data.mensaje || "Listo.");
+        sessionStorage.clear(); localStorage.clear();
+        location.href = location.pathname + "?cb=" + Date.now();
+      })
+      .catch(function (err) { alert("Error al resetear: " + err.message); });
   }
 
   // ---------- Arranque ----------
   window.onload = function () {
     var sesion = leerSesion();
     document.getElementById("vistaCarga").style.display = "none";
-    if (sesion) {
-      USUARIO_ACTIVO = sesion;
-      mostrarPantallaEscaneo();
-    } else {
-      document.getElementById("vistaLogin").style.display = "flex";
-    }
+    if (sesion) { USUARIO_ACTIVO = sesion; cargarConfig(); }
+    else { document.getElementById("vistaLogin").style.display = "flex"; }
   };
 </script>
 
