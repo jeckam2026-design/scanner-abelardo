@@ -303,14 +303,13 @@
       var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
       var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
 
-      if (minActual > tardeHasta) {
-        mostrarResultado({ ok: false, mensaje: "YA ES MUY TARDE, JUSTIFICA CON TU AUXILIAR" }, idQR);
-        return;
-      }
+      var estado, mensajeEntrada;
+      if (minActual <= puntualHasta) { estado = "PUNTUAL"; mensajeEntrada = null; }
+      else if (minActual <= tardeHasta) { estado = "TARDE"; mensajeEntrada = null; }
+      else { estado = "FALTA"; mensajeEntrada = "YA ES MUY TARDE, JUSTIFICA CON TU AUXILIAR"; }
 
-      var estado = (minActual <= puntualHasta) ? "PUNTUAL" : "TARDE";
       guardarRegistroHoy(idQR, "ENTRADA");
-      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, hora: horaTxt }, idQR);
+      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, hora: horaTxt, mensaje: mensajeEntrada }, idQR);
       enviarAlServidorEnSegundoPlano(idQR, "ENTRADA", estado);
 
     } else {
@@ -344,12 +343,26 @@
           }
         } else if (!data.ok) {
           deshacerRegistroLocal(idQR, tipoEsperado);
+          corregirEstadoEnPantallaRechazo(idQR, data.mensaje);
         }
       })
       .catch(function (err) {
         if (dbg) dbg.textContent = "ERROR DE RED (" + idQR + "): " + err.message;
         deshacerRegistroLocal(idQR, tipoEsperado);
       });
+  }
+
+  function corregirEstadoEnPantallaRechazo(idQR, mensaje) {
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    if (document.getElementById("vistaResultado").style.display !== "flex") return;
+    if (!nombreDiv || nombreDiv.textContent !== idQR) return;
+
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    icono.className = "icono-resultado icono-falta";
+    icono.textContent = "✖";
+    estadoDiv.className = "fondo-falta";
+    estadoDiv.textContent = (mensaje || "No se pudo registrar") + " (corregido)";
   }
 
   function corregirEstadoEnPantalla(idQR, estadoReal, tipoReal, mensajeReal) {
@@ -407,7 +420,7 @@
       icono.textContent = (cls === "ok") ? "✔" : (cls === "tarde") ? "⏰" : "!";
       detalleDiv.textContent = (data.tipo === "ENTRADA" ? "Registro de ENTRADA — " : "Registro de SALIDA — ") + data.hora;
       estadoDiv.classList.add("fondo-" + cls);
-      estadoDiv.textContent = (data.tipo === "SALIDA" && data.mensaje) ? data.mensaje : data.estado;
+      estadoDiv.textContent = (data.mensaje) ? data.mensaje : data.estado;
     }
 
     if (timeoutResumen) clearTimeout(timeoutResumen);
