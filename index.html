@@ -306,7 +306,13 @@
       var estado, mensajeEntrada;
       if (minActual <= puntualHasta) { estado = "PUNTUAL"; mensajeEntrada = null; }
       else if (minActual <= tardeHasta) { estado = "TARDE"; mensajeEntrada = null; }
-      else { estado = "FALTA"; mensajeEntrada = "YA ES MUY TARDE, JUSTIFICA CON TU AUXILIAR"; }
+      else {
+        estado = "FALTA";
+        var salidaDesdeParaMsg = minutosDesdeTexto(CFG.HORA_SALIDA_DESDE);
+        mensajeEntrada = (minActual >= salidaDesdeParaMsg)
+          ? "NO PUEDES MARCAR SALIDA, PORQUE NO REGISTRASTE ENTRADA"
+          : "YA ES MUY TARDE, JUSTIFICA CON TU AUXILIAR";
+      }
 
       guardarRegistroHoy(idQR, "ENTRADA");
       mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, hora: horaTxt, mensaje: mensajeEntrada }, idQR);
