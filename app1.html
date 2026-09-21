@@ -7,13 +7,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; background: #f2f4f7; margin: 0; color: #222; }
-  header {
-    background: #1e3a5f; color: #fff; padding: 14px 16px;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-  }
+  header { background: #1e3a5f; color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   header .titulo { display: flex; align-items: center; gap: 10px; }
   header img { height: 40px; }
   header h1 { font-size: 15px; margin: 0; line-height: 1.2; }
@@ -32,14 +30,11 @@
   nav.tabs button { flex: 1; min-width: 140px; padding: 12px 8px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: bold; color: #666; border-bottom: 3px solid transparent; }
   nav.tabs button.activa { color: #1e3a5f; border-bottom-color: #d9a13c; }
 
-  .contenido-tab { display: none; padding: 16px; max-width: 950px; margin: 0 auto; }
+  .contenido-tab { display: none; padding: 16px; max-width: 1100px; margin: 0 auto; }
   .contenido-tab.activa { display: block; }
 
-  .sub-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
-  .sub-toggle button {
-    padding: 8px 16px; border: 1px solid #1e3a5f; background: #fff; color: #1e3a5f;
-    border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;
-  }
+  .sub-toggle { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .sub-toggle button { padding: 8px 16px; border: 1px solid #1e3a5f; background: #fff; color: #1e3a5f; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; }
   .sub-toggle button.activa { background: #1e3a5f; color: #fff; }
 
   .fila-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 16px; }
@@ -74,7 +69,26 @@
   .fila-justificar td { text-align: left; padding: 12px; }
   .fila-justificar textarea { width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
 
-  .botones-export { display: flex; gap: 10px; margin-top: 14px; }
+  .botones-export { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* Cuadrícula P/T/F/J */
+  .tabla-cuadricula-wrap { overflow-x: auto; }
+  table.cuadricula { font-size: 11px; }
+  table.cuadricula th, table.cuadricula td { padding: 4px 3px; white-space: nowrap; }
+  table.cuadricula td.nombre-col, table.cuadricula th.nombre-col { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 150px; }
+  table.cuadricula th.nombre-col { background: #eef1f5; }
+  .cod-P { background: #d9f2df; color: #1a7a3a; font-weight: bold; }
+  .cod-T { background: #fff3cd; color: #8a6d00; font-weight: bold; }
+  .cod-F { background: #fbdcdc; color: #b3261e; font-weight: bold; }
+  .cod-J { background: #dbe9ff; color: #1a4d8a; font-weight: bold; }
+  .cod-guion { background: #f5f5f5; color: #bbb; }
+
+  .leyenda-cuadricula { font-size: 12px; color: #555; margin-bottom: 10px; }
+  .leyenda-cuadricula span { display: inline-block; margin-right: 12px; }
+
+  .contenedor-graficos { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px; }
+  .caja-grafico { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); flex: 1; min-width: 280px; max-width: 420px; }
+  .caja-grafico canvas { max-width: 100%; }
 </style>
 </head>
 <body>
@@ -118,20 +132,39 @@
       <button id="btnModoAula" onclick="cambiarModoAsistencia('aula')">Por aula</button>
     </div>
 
-    <div class="fila-filtros">
-      <div class="campo" id="campoAsisId"><label>ID del estudiante</label><input type="text" id="asisId" placeholder="Ej: JAQ001"></div>
-      <div class="campo" id="campoAsisGrado" style="display:none;"><label>Grado</label>
-        <select id="asisGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
+    <!-- Por estudiante: rango de fechas, lista diaria -->
+    <div id="bloqueAsisEstudiante">
+      <div class="fila-filtros">
+        <div class="campo"><label>ID del estudiante</label><input type="text" id="asisId" placeholder="Ej: JAQ001"></div>
+        <div class="campo"><label>Desde</label><input type="date" id="asisDesde"></div>
+        <div class="campo"><label>Hasta</label><input type="date" id="asisHasta"></div>
+        <button class="btn-primario" onclick="consultarAsistenciaEstudiante()">Consultar</button>
       </div>
-      <div class="campo" id="campoAsisSeccion" style="display:none;"><label>Sección</label>
-        <select id="asisSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-      </div>
-      <div class="campo"><label>Desde</label><input type="date" id="asisDesde"></div>
-      <div class="campo"><label>Hasta</label><input type="date" id="asisHasta"></div>
-      <button class="btn-primario" onclick="consultarAsistencia()">Consultar</button>
+      <p class="nota-rango">Por defecto se muestra el mes actual.</p>
+      <div id="asisEstudianteResultado"></div>
     </div>
-    <p class="nota-rango">Por defecto se muestra el mes actual. Cambia "Desde/Hasta" para otro rango.</p>
-    <div id="asisResultado"></div>
+
+    <!-- Por aula: mes + grado/sección, cuadrícula P/T/F/J -->
+    <div id="bloqueAsisAula" style="display:none;">
+      <div class="fila-filtros">
+        <div class="campo"><label>Mes</label><input type="month" id="asisMes"></div>
+        <div class="campo"><label>Grado</label>
+          <select id="asisGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
+        </div>
+        <div class="campo"><label>Sección</label>
+          <select id="asisSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        </div>
+        <button class="btn-primario" onclick="consultarAsistenciaAula()">Consultar</button>
+      </div>
+      <div class="leyenda-cuadricula">
+        <span><b class="cod-P" style="padding:2px 6px;border-radius:3px;">P</b> Puntual</span>
+        <span><b class="cod-T" style="padding:2px 6px;border-radius:3px;">T</b> Tarde</span>
+        <span><b class="cod-F" style="padding:2px 6px;border-radius:3px;">F</b> Falta</span>
+        <span><b class="cod-J" style="padding:2px 6px;border-radius:3px;">J</b> Justificado</span>
+        <span><b class="cod-guion" style="padding:2px 6px;border-radius:3px;">-</b> Día futuro</span>
+      </div>
+      <div id="asisAulaResultado" class="tabla-cuadricula-wrap"></div>
+    </div>
   </div>
 
   <!-- ==================== TAB 2: JUSTIFICACIONES ==================== -->
@@ -145,19 +178,41 @@
 
   <!-- ==================== TAB 3: REPORTES ==================== -->
   <div id="tabReportes" class="contenido-tab">
-    <div class="fila-filtros">
-      <div class="campo"><label>Grado</label>
-        <select id="repGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
-      </div>
-      <div class="campo"><label>Sección</label>
-        <select id="repSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-      </div>
-      <div class="campo"><label>Desde</label><input type="date" id="repDesde"></div>
-      <div class="campo"><label>Hasta</label><input type="date" id="repHasta"></div>
-      <button class="btn-primario" onclick="consultarReporteAula()">Ver reporte</button>
+    <div class="sub-toggle">
+      <button id="btnRepModoAula" class="activa" onclick="cambiarModoReporte('aula')">Por aula</button>
+      <button id="btnRepModoEstudiante" onclick="cambiarModoReporte('estudiante')">Por estudiante</button>
     </div>
-    <p class="nota-rango">Por defecto se muestra el mes actual.</p>
-    <div id="repResultado"></div>
+
+    <div id="bloqueRepAula">
+      <div class="fila-filtros">
+        <div class="campo"><label>Mes</label><input type="month" id="repMesAula"></div>
+        <div class="campo"><label>Grado</label>
+          <select id="repGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
+        </div>
+        <div class="campo"><label>Sección</label>
+          <select id="repSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        </div>
+        <button class="btn-primario" onclick="consultarReporteAula()">Ver reporte</button>
+      </div>
+    </div>
+
+    <div id="bloqueRepEstudiante" style="display:none;">
+      <div class="fila-filtros">
+        <div class="campo"><label>ID del estudiante</label><input type="text" id="repId" placeholder="Ej: JAQ001"></div>
+        <div class="campo"><label>Mes</label><input type="month" id="repMesEstudiante"></div>
+        <button class="btn-primario" onclick="consultarReporteEstudiante()">Ver reporte</button>
+      </div>
+    </div>
+
+    <p class="nota-rango">Por defecto se muestra el mes actual, hasta el día de hoy.</p>
+    <div class="leyenda-cuadricula">
+      <span><b class="cod-P" style="padding:2px 6px;border-radius:3px;">P</b> Puntual</span>
+      <span><b class="cod-T" style="padding:2px 6px;border-radius:3px;">T</b> Tarde</span>
+      <span><b class="cod-F" style="padding:2px 6px;border-radius:3px;">F</b> Falta</span>
+      <span><b class="cod-J" style="padding:2px 6px;border-radius:3px;">J</b> Justificado</span>
+      <span><b class="cod-guion" style="padding:2px 6px;border-radius:3px;">-</b> Día futuro</span>
+    </div>
+    <div id="repResultado" class="tabla-cuadricula-wrap"></div>
     <div class="botones-export" id="repBotonesExport" style="display:none;">
       <button class="btn-secundario" onclick="exportarReportePDF()">📄 Descargar PDF</button>
       <button class="btn-secundario" onclick="exportarReporteExcel()">📊 Descargar Excel</button>
@@ -171,6 +226,10 @@
       <button id="btnNivelGrado" onclick="cambiarNivelStats('grado')">Por grado</button>
       <button id="btnNivelGeneral" onclick="cambiarNivelStats('general')">General</button>
     </div>
+    <div class="sub-toggle">
+      <button id="btnPeriodoDia" class="activa" onclick="cambiarPeriodoStats('dia')">Día</button>
+      <button id="btnPeriodoMes" onclick="cambiarPeriodoStats('mes')">Mes</button>
+    </div>
     <div class="fila-filtros">
       <div class="campo" id="campoStatsGrado"><label>Grado</label>
         <select id="statsGrado"><option>PRIMERO</option><option>SEGUNDO</option><option>TERCERO</option><option>CUARTO</option><option>QUINTO</option></select>
@@ -178,11 +237,23 @@
       <div class="campo" id="campoStatsSeccion"><label>Sección</label>
         <select id="statsSeccion"><option>A</option><option>B</option><option>C</option><option>D</option></select>
       </div>
-      <div class="campo"><label>Fecha</label><input type="date" id="statsFecha"></div>
+      <div class="campo" id="campoStatsFechaDia"><label>Fecha</label><input type="date" id="statsFecha"></div>
+      <div class="campo" id="campoStatsMes" style="display:none;"><label>Mes</label><input type="month" id="statsMes"></div>
       <button class="btn-primario" onclick="consultarStats()">Ver estadísticas</button>
     </div>
     <div id="statsResultado"></div>
+    <div class="contenedor-graficos" id="statsGraficos" style="display:none;">
+      <div class="caja-grafico">
+        <canvas id="chartBarras"></canvas>
+        <div class="botones-export"><button class="btn-secundario" onclick="descargarGrafico('chartBarras','grafico_barras')">⬇️ Descargar imagen</button></div>
+      </div>
+      <div class="caja-grafico">
+        <canvas id="chartCircular"></canvas>
+        <div class="botones-export"><button class="btn-secundario" onclick="descargarGrafico('chartCircular','grafico_circular')">⬇️ Descargar imagen</button></div>
+      </div>
+    </div>
   </div>
+
   <div style="text-align:center; font-size:11px; color:#888; padding:16px 8px 24px;">
     Desarrollado por: José Carlos Huamaní Quicaño · Cel. 954 000 684 · JECKAM Academy © 2026
   </div>
@@ -192,15 +263,25 @@
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwbFz2SlvxX-gbRIf9pjTBkgw4qZLZLwLicssIAKWYROEZqkDXaIguMiyXy3MkjsddC/exec";
   var USUARIO_ACTIVO = null;
   var modoAsistencia = "estudiante";
+  var modoReporte = "aula";
   var nivelStats = "seccion";
-  var ultimoReporteDatos = null; // para exportar PDF/Excel lo último consultado
+  var periodoStats = "dia";
+  var ultimoReporteDatos = null;
+  var chartBarrasInst = null, chartCircularInst = null;
 
   function pad2(n) { return String(n).padStart(2, "0"); }
   function fechaISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function mesISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1); }
   function primerDiaMes() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); }
   function ultimoDiaMes() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
   function isoADDMMYYYY(iso) { if (!iso) return ""; var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
   function claseCss(estado) { return "e-" + String(estado || "").replace(/\s+/g, "-").replace("Ó", "O"); }
+  function parseMonthInput(id) {
+    var v = document.getElementById(id).value; // "YYYY-MM"
+    if (!v) { var d = new Date(); return { anio: d.getFullYear(), mes: d.getMonth() + 1 }; }
+    var p = v.split("-");
+    return { anio: parseInt(p[0], 10), mes: parseInt(p[1], 10) };
+  }
 
   // ---------- Login ----------
   function guardarSesion(u) { sessionStorage.setItem("sesionApp1", JSON.stringify(u)); }
@@ -213,7 +294,6 @@
     var err = document.getElementById("errorLogin");
     err.textContent = "";
     if (!nombre || !dni) { err.textContent = "Ingrese usuario y DNI."; return; }
-
     document.getElementById("btnLogin").disabled = true;
     fetch(WEBAPP_URL + "?accion=login&nombre=" + encodeURIComponent(nombre) + "&dni=" + encodeURIComponent(dni))
       .then(function (r) { return r.json(); })
@@ -234,23 +314,21 @@
     document.getElementById("textoSesion").textContent =
       USUARIO_ACTIVO.nombre + " (" + USUARIO_ACTIVO.rol + (USUARIO_ACTIVO.rol === "TUTOR" ? " - " + USUARIO_ACTIVO.seccionAsignada : "") + ")";
 
-    var pDesde = fechaISO(primerDiaMes()), pHasta = fechaISO(ultimoDiaMes()), pHoy = fechaISO(new Date());
+    var pDesde = fechaISO(primerDiaMes()), pHasta = fechaISO(ultimoDiaMes()), pHoy = fechaISO(new Date()), pMes = mesISO(new Date());
     document.getElementById("asisDesde").value = pDesde;
     document.getElementById("asisHasta").value = pHasta;
-    document.getElementById("repDesde").value = pDesde;
-    document.getElementById("repHasta").value = pHasta;
+    document.getElementById("asisMes").value = pMes;
+    document.getElementById("repMesAula").value = pMes;
+    document.getElementById("repMesEstudiante").value = pMes;
     document.getElementById("statsFecha").value = pHoy;
+    document.getElementById("statsMes").value = pMes;
 
     if (USUARIO_ACTIVO.rol === "TUTOR" && USUARIO_ACTIVO.seccionAsignada) {
       var partes = USUARIO_ACTIVO.seccionAsignada.trim().split(" ");
       var seccion = partes.pop();
       var grado = partes.join(" ");
-      ["asisGrado", "repGrado", "statsGrado"].forEach(function (id) {
-        var el = document.getElementById(id); el.value = grado; el.disabled = true;
-      });
-      ["asisSeccion", "repSeccion", "statsSeccion"].forEach(function (id) {
-        var el = document.getElementById(id); el.value = seccion; el.disabled = true;
-      });
+      ["asisGrado", "repGrado", "statsGrado"].forEach(function (id) { var el = document.getElementById(id); el.value = grado; el.disabled = true; });
+      ["asisSeccion", "repSeccion", "statsSeccion"].forEach(function (id) { var el = document.getElementById(id); el.value = seccion; el.disabled = true; });
     }
   }
 
@@ -259,27 +337,68 @@
     document.querySelectorAll(".contenido-tab").forEach(function (t) { t.classList.toggle("activa", t.id === id); });
   }
 
+  // ==================== CUADRÍCULA: helpers compartidos ====================
+  function renderCuadricula(contenedorId, dias, estudiantes) {
+    var div = document.getElementById(contenedorId);
+    if (!estudiantes || estudiantes.length === 0) { div.innerHTML = "<p>No hay estudiantes para mostrar.</p>"; return; }
+
+    var html = "<table class='cuadricula'><thead><tr><th class='nombre-col'>Estudiante</th>";
+    dias.forEach(function (d) { html += "<th>" + d + "</th>"; });
+    html += "</tr></thead><tbody>";
+
+    estudiantes.forEach(function (e) {
+      html += "<tr><td class='nombre-col'>" + e.id + " - " + e.nombre + "</td>";
+      e.codigos.forEach(function (c) {
+        var cls = (c === "-") ? "cod-guion" : "cod-" + c;
+        html += "<td class='" + cls + "'>" + c + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table>";
+    div.innerHTML = html;
+  }
+
+  function exportarCuadriculaExcel(nombreArchivo, dias, estudiantes, tituloHoja) {
+    var filas = [["ID", "Nombre"].concat(dias.map(function (d) { return "Día " + d; }))];
+    estudiantes.forEach(function (e) { filas.push([e.id, e.nombre].concat(e.codigos)); });
+    var ws = XLSX.utils.aoa_to_sheet(filas);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, tituloHoja || "Reporte");
+    XLSX.writeFile(wb, nombreArchivo);
+  }
+
+  function exportarCuadriculaPDF(nombreArchivo, lineas, dias, estudiantes) {
+    var doc = new jspdf.jsPDF({ orientation: "landscape" });
+    doc.setFontSize(12);
+    lineas.forEach(function (linea, i) { doc.text(linea, 14, 12 + i * 6); });
+
+    var head = [["ID", "Nombre"].concat(dias.map(function (d) { return String(d); }))];
+    var body = estudiantes.map(function (e) { return [e.id, e.nombre].concat(e.codigos); });
+
+    doc.autoTable({
+      startY: 12 + lineas.length * 6 + 4,
+      head: head, body: body,
+      styles: { fontSize: 6, cellPadding: 1.5, halign: "center" },
+      headStyles: { fillColor: [30, 58, 95] },
+      columnStyles: { 1: { halign: "left" } }
+    });
+    doc.save(nombreArchivo);
+  }
+
   // ==================== TAB 1: ASISTENCIA ====================
   function cambiarModoAsistencia(modo) {
     modoAsistencia = modo;
     document.getElementById("btnModoEstudiante").classList.toggle("activa", modo === "estudiante");
     document.getElementById("btnModoAula").classList.toggle("activa", modo === "aula");
-    document.getElementById("campoAsisId").style.display = (modo === "estudiante") ? "flex" : "none";
-    document.getElementById("campoAsisGrado").style.display = (modo === "aula") ? "flex" : "none";
-    document.getElementById("campoAsisSeccion").style.display = (modo === "aula") ? "flex" : "none";
-    document.getElementById("asisResultado").innerHTML = "";
-  }
-
-  function consultarAsistencia() {
-    if (modoAsistencia === "estudiante") consultarAsistenciaEstudiante();
-    else consultarAsistenciaAula();
+    document.getElementById("bloqueAsisEstudiante").style.display = (modo === "estudiante") ? "block" : "none";
+    document.getElementById("bloqueAsisAula").style.display = (modo === "aula") ? "block" : "none";
   }
 
   function consultarAsistenciaEstudiante() {
     var id = document.getElementById("asisId").value.trim();
     var desde = isoADDMMYYYY(document.getElementById("asisDesde").value);
     var hasta = isoADDMMYYYY(document.getElementById("asisHasta").value);
-    var div = document.getElementById("asisResultado");
+    var div = document.getElementById("asisEstudianteResultado");
     if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
     div.innerHTML = "Cargando...";
 
@@ -305,51 +424,17 @@
   function consultarAsistenciaAula() {
     var grado = document.getElementById("asisGrado").value;
     var seccion = document.getElementById("asisSeccion").value;
-    var desdeISO = document.getElementById("asisDesde").value;
-    var hastaISO = document.getElementById("asisHasta").value;
-    var div = document.getElementById("asisResultado");
+    var m = parseMonthInput("asisMes");
+    var div = document.getElementById("asisAulaResultado");
     div.innerHTML = "Cargando...";
 
-    if (desdeISO === hastaISO) {
-      fetch(WEBAPP_URL + "?accion=asistenciaDia&fecha=" + encodeURIComponent(isoADDMMYYYY(desdeISO)) + "&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-          if (data.estudiantes.length === 0) { div.innerHTML = "<p>No hay estudiantes activos en esa sección.</p>"; return; }
-          var html = "<table><thead><tr><th>ID</th><th>Nombre</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th></tr></thead><tbody>";
-          data.estudiantes.forEach(function (e) {
-            html += "<tr><td>" + e.id + "</td><td style='text-align:left;'>" + e.nombre + "</td>" +
-              "<td>" + (e.horaEntrada || "-") + "</td><td><span class='estado " + claseCss(e.estadoEntrada) + "'>" + e.estadoEntrada + "</span></td>" +
-              "<td>" + (e.horaSalida || "-") + "</td><td><span class='estado " + claseCss(e.estadoSalida) + "'>" + e.estadoSalida + "</span></td></tr>";
-          });
-          html += "</tbody></table>";
-          div.innerHTML = html;
-        })
-        .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
-    } else {
-      renderResumenAula(grado, seccion, isoADDMMYYYY(desdeISO), isoADDMMYYYY(hastaISO), div, null);
-    }
-  }
-
-  function renderResumenAula(grado, seccion, desde, hasta, divDestino, callbackDatos) {
-    divDestino.innerHTML = "Cargando...";
-    fetch(WEBAPP_URL + "?accion=resumenAula&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion) + "&desde=" + encodeURIComponent(desde) + "&hasta=" + encodeURIComponent(hasta))
+    fetch(WEBAPP_URL + "?accion=cuadriculaAula&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion) + "&anio=" + m.anio + "&mes=" + m.mes)
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.ok) { divDestino.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-        if (data.estudiantes.length === 0) { divDestino.innerHTML = "<p>No hay estudiantes activos en esa sección.</p>"; return; }
-
-        var html = "<table><thead><tr><th>ID</th><th>Nombre</th><th>Puntual</th><th>Tarde</th><th>Falta</th><th>Salida OK</th><th>Fuera Horario</th><th>Justificados</th></tr></thead><tbody>";
-        data.estudiantes.forEach(function (e) {
-          html += "<tr><td>" + e.id + "</td><td style='text-align:left;'>" + e.nombre + "</td>" +
-            "<td>" + e.puntual + "</td><td>" + e.tarde + "</td><td>" + e.falta + "</td>" +
-            "<td>" + e.salidaOk + "</td><td>" + e.fueraDeHorario + "</td><td>" + e.justificados + "</td></tr>";
-        });
-        html += "</tbody></table>";
-        divDestino.innerHTML = html;
-        if (callbackDatos) callbackDatos(data);
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        renderCuadricula("asisAulaResultado", data.dias, data.estudiantes);
       })
-      .catch(function () { divDestino.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
   }
 
   // ==================== TAB 2: JUSTIFICACIONES ====================
@@ -374,13 +459,9 @@
           var necesitaJustificar = (r.estadoEntrada === "TARDE" || r.estadoEntrada === "FALTA");
           var yaJustificado = !!r.justificadoPor;
           var accionHtml;
-          if (yaJustificado) {
-            accionHtml = "<span style='color:#1a7a3a;'>✓ " + r.justificadoPor + "</span>";
-          } else if (necesitaJustificar) {
-            accionHtml = "<button class='btn-mini' onclick='toggleFilaJustificar(" + idx + ")'>Justificar</button>";
-          } else {
-            accionHtml = "-";
-          }
+          if (yaJustificado) accionHtml = "<span style='color:#1a7a3a;'>✓ " + r.justificadoPor + "</span>";
+          else if (necesitaJustificar) accionHtml = "<button class='btn-mini' onclick='toggleFilaJustificar(" + idx + ")'>Justificar</button>";
+          else accionHtml = "-";
 
           html += "<tr><td>" + r.fecha + "</td>" +
             "<td><span class='estado " + claseCss(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
@@ -408,67 +489,82 @@
   function guardarJustificacionFila(id, fecha, idx) {
     var motivo = document.getElementById("motivoJust" + idx).value.trim();
     if (!motivo) { alert("Escribe el motivo antes de guardar."); return; }
-
     var url = WEBAPP_URL + "?accion=justificar&id=" + encodeURIComponent(id) + "&fecha=" + encodeURIComponent(fecha) +
       "&motivo=" + encodeURIComponent(motivo) + "&usuario=" + encodeURIComponent(USUARIO_ACTIVO.nombre);
-
     fetch(url).then(function (r) { return r.json(); }).then(function (data) {
       if (data.ok) { buscarHistorialJustificar(); } else { alert(data.mensaje || "No se pudo guardar."); }
     }).catch(function () { alert("Error de conexión."); });
   }
 
   // ==================== TAB 3: REPORTES ====================
+  function cambiarModoReporte(modo) {
+    modoReporte = modo;
+    document.getElementById("btnRepModoAula").classList.toggle("activa", modo === "aula");
+    document.getElementById("btnRepModoEstudiante").classList.toggle("activa", modo === "estudiante");
+    document.getElementById("bloqueRepAula").style.display = (modo === "aula") ? "block" : "none";
+    document.getElementById("bloqueRepEstudiante").style.display = (modo === "estudiante") ? "block" : "none";
+    document.getElementById("repResultado").innerHTML = "";
+    document.getElementById("repBotonesExport").style.display = "none";
+    ultimoReporteDatos = null;
+  }
+
   function consultarReporteAula() {
     var grado = document.getElementById("repGrado").value;
     var seccion = document.getElementById("repSeccion").value;
-    var desde = isoADDMMYYYY(document.getElementById("repDesde").value);
-    var hasta = isoADDMMYYYY(document.getElementById("repHasta").value);
+    var m = parseMonthInput("repMesAula");
     var div = document.getElementById("repResultado");
+    div.innerHTML = "Cargando...";
 
-    renderResumenAula(grado, seccion, desde, hasta, div, function (data) {
-      ultimoReporteDatos = data;
-      document.getElementById("repBotonesExport").style.display = "flex";
-    });
+    fetch(WEBAPP_URL + "?accion=cuadriculaAula&grado=" + encodeURIComponent(grado) + "&seccion=" + encodeURIComponent(seccion) + "&anio=" + m.anio + "&mes=" + m.mes)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        renderCuadricula("repResultado", data.dias, data.estudiantes);
+        ultimoReporteDatos = { tipo: "aula", dias: data.dias, estudiantes: data.estudiantes, grado: grado, seccion: seccion, anio: m.anio, mes: m.mes };
+        document.getElementById("repBotonesExport").style.display = "flex";
+      })
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  function consultarReporteEstudiante() {
+    var id = document.getElementById("repId").value.trim();
+    var m = parseMonthInput("repMesEstudiante");
+    var div = document.getElementById("repResultado");
+    if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
+    div.innerHTML = "Cargando...";
+
+    fetch(WEBAPP_URL + "?accion=cuadriculaEstudiante&id=" + encodeURIComponent(id) + "&anio=" + m.anio + "&mes=" + m.mes)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        var estudiantes = [{ id: data.estudiante.id, nombre: data.estudiante.nombre, codigos: data.codigos }];
+        renderCuadricula("repResultado", data.dias, estudiantes);
+        ultimoReporteDatos = { tipo: "estudiante", dias: data.dias, estudiantes: estudiantes, estudianteInfo: data.estudiante, anio: m.anio, mes: m.mes };
+        document.getElementById("repBotonesExport").style.display = "flex";
+      })
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
   }
 
   function exportarReporteExcel() {
     if (!ultimoReporteDatos) return;
-    var filas = [["ID", "Nombre", "Puntual", "Tarde", "Falta", "Salida OK", "Fuera Horario", "Justificados"]];
-    ultimoReporteDatos.estudiantes.forEach(function (e) {
-      filas.push([e.id, e.nombre, e.puntual, e.tarde, e.falta, e.salidaOk, e.fueraDeHorario, e.justificados]);
-    });
-    var ws = XLSX.utils.aoa_to_sheet(filas);
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-    var nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" +
-      ultimoReporteDatos.desde.replace(/\//g, "-") + "_a_" + ultimoReporteDatos.hasta.replace(/\//g, "-") + ".xlsx";
-    XLSX.writeFile(wb, nombreArchivo);
+    var nombreArchivo = (ultimoReporteDatos.tipo === "aula")
+      ? "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".xlsx"
+      : "Reporte_" + ultimoReporteDatos.estudianteInfo.id + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".xlsx";
+    exportarCuadriculaExcel(nombreArchivo, ultimoReporteDatos.dias, ultimoReporteDatos.estudiantes, "Reporte");
   }
 
   function exportarReportePDF() {
     if (!ultimoReporteDatos) return;
-    var doc = new jspdf.jsPDF();
-    doc.setFontSize(13);
-    doc.text("I.E.P. José Abelardo Quiñones Gonzales", 14, 15);
-    doc.setFontSize(10);
-    doc.text("Reporte de asistencia — " + ultimoReporteDatos.grado + " \"" + ultimoReporteDatos.seccion + "\"", 14, 22);
-    doc.text("Del " + ultimoReporteDatos.desde + " al " + ultimoReporteDatos.hasta, 14, 28);
-
-    var filas = ultimoReporteDatos.estudiantes.map(function (e) {
-      return [e.id, e.nombre, e.puntual, e.tarde, e.falta, e.salidaOk, e.fueraDeHorario, e.justificados];
-    });
-
-    doc.autoTable({
-      startY: 34,
-      head: [["ID", "Nombre", "Puntual", "Tarde", "Falta", "Salida OK", "Fuera Horario", "Justificados"]],
-      body: filas,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [30, 58, 95] }
-    });
-
-    var nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" +
-      ultimoReporteDatos.desde.replace(/\//g, "-") + "_a_" + ultimoReporteDatos.hasta.replace(/\//g, "-") + ".pdf";
-    doc.save(nombreArchivo);
+    var lineas = ["I.E.P. José Abelardo Quiñones Gonzales"];
+    var nombreArchivo;
+    if (ultimoReporteDatos.tipo === "aula") {
+      lineas.push("Reporte de asistencia — " + ultimoReporteDatos.grado + " \"" + ultimoReporteDatos.seccion + "\" — " + ultimoReporteDatos.mes + "/" + ultimoReporteDatos.anio);
+      nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".pdf";
+    } else {
+      lineas.push("Reporte de asistencia — " + ultimoReporteDatos.estudianteInfo.nombre + " (" + ultimoReporteDatos.estudianteInfo.grado + " \"" + ultimoReporteDatos.estudianteInfo.seccion + "\") — " + ultimoReporteDatos.mes + "/" + ultimoReporteDatos.anio);
+      nombreArchivo = "Reporte_" + ultimoReporteDatos.estudianteInfo.id + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".pdf";
+    }
+    exportarCuadriculaPDF(nombreArchivo, lineas, ultimoReporteDatos.dias, ultimoReporteDatos.estudiantes);
   }
 
   // ==================== TAB 4: ESTADÍSTICAS ====================
@@ -480,35 +576,86 @@
     document.getElementById("campoStatsGrado").style.display = (nivel === "general") ? "none" : "flex";
     document.getElementById("campoStatsSeccion").style.display = (nivel === "seccion") ? "flex" : "none";
     document.getElementById("statsResultado").innerHTML = "";
+    document.getElementById("statsGraficos").style.display = "none";
+  }
+
+  function cambiarPeriodoStats(periodo) {
+    periodoStats = periodo;
+    document.getElementById("btnPeriodoDia").classList.toggle("activa", periodo === "dia");
+    document.getElementById("btnPeriodoMes").classList.toggle("activa", periodo === "mes");
+    document.getElementById("campoStatsFechaDia").style.display = (periodo === "dia") ? "flex" : "none";
+    document.getElementById("campoStatsMes").style.display = (periodo === "mes") ? "flex" : "none";
   }
 
   function consultarStats() {
-    var fecha = isoADDMMYYYY(document.getElementById("statsFecha").value);
     var grado = (nivelStats !== "general") ? document.getElementById("statsGrado").value : "";
     var seccion = (nivelStats === "seccion") ? document.getElementById("statsSeccion").value : "";
     var div = document.getElementById("statsResultado");
     div.innerHTML = "Cargando...";
 
-    var url = WEBAPP_URL + "?accion=estadisticasNivel&fecha=" + encodeURIComponent(fecha) + "&nivel=" + encodeURIComponent(nivelStats);
+    var url, esRango = (periodoStats === "mes");
+    if (periodoStats === "dia") {
+      var fecha = isoADDMMYYYY(document.getElementById("statsFecha").value);
+      url = WEBAPP_URL + "?accion=estadisticasNivel&fecha=" + encodeURIComponent(fecha) + "&nivel=" + encodeURIComponent(nivelStats);
+    } else {
+      var m = parseMonthInput("statsMes");
+      var hoy = new Date();
+      var esMesActual = (hoy.getFullYear() === m.anio && (hoy.getMonth() + 1) === m.mes);
+      var desdeD = new Date(m.anio, m.mes - 1, 1);
+      var hastaD = esMesActual ? hoy : new Date(m.anio, m.mes, 0);
+      var desdeTxt = isoADDMMYYYY(fechaISO(desdeD));
+      var hastaTxt = isoADDMMYYYY(fechaISO(hastaD));
+      url = WEBAPP_URL + "?accion=estadisticasRango&desde=" + encodeURIComponent(desdeTxt) + "&hasta=" + encodeURIComponent(hastaTxt) + "&nivel=" + encodeURIComponent(nivelStats);
+    }
     if (grado) url += "&grado=" + encodeURIComponent(grado);
     if (seccion) url += "&seccion=" + encodeURIComponent(seccion);
 
     fetch(url).then(function (r) { return r.json(); }).then(function (data) {
       if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
       var c = data.conteo, p = data.porcentajes;
-      var html = "<p style='font-size:13px; color:#555;'>Total de estudiantes en el ámbito: <strong>" + data.total + "</strong></p>";
-      html += "<div class='tarjetas-stats'>";
-      var items = [
-        ["puntual", "Puntual"], ["tarde", "Tardanza"], ["falta", "Falta"], ["justificados", "Justificadas"]
-      ];
+      var totalTxt = esRango ? ("Estudiantes en el ámbito: <strong>" + data.totalEstudiantes + "</strong>") : ("Total de estudiantes en el ámbito: <strong>" + data.total + "</strong>");
+      var html = "<p style='font-size:13px; color:#555;'>" + totalTxt + "</p><div class='tarjetas-stats'>";
+      var items = [["puntual", "Puntual"], ["tarde", "Tardanza"], ["falta", "Falta"], ["justificados", "Justificadas"]];
       items.forEach(function (it) {
-        html += "<div class='tarjeta-stat'><div class='numero'>" + c[it[0]] + "</div>" +
-          "<div class='porcentaje'>" + p[it[0]] + "%</div>" +
-          "<div class='etiqueta'>" + it[1] + "</div></div>";
+        html += "<div class='tarjeta-stat'><div class='numero'>" + c[it[0]] + "</div><div class='porcentaje'>" + p[it[0]] + "%</div><div class='etiqueta'>" + it[1] + "</div></div>";
       });
       html += "</div>";
       div.innerHTML = html;
+      dibujarGraficos(c);
     }).catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+  }
+
+  function dibujarGraficos(conteo) {
+    document.getElementById("statsGraficos").style.display = "flex";
+    var etiquetas = ["Puntual", "Tardanza", "Falta", "Justificadas"];
+    var valores = [conteo.puntual, conteo.tarde, conteo.falta, conteo.justificados];
+    var colores = ["#2fa84f", "#e0a800", "#c0392b", "#1a4d8a"];
+
+    if (chartBarrasInst) chartBarrasInst.destroy();
+    if (chartCircularInst) chartCircularInst.destroy();
+
+    var ctxBar = document.getElementById("chartBarras").getContext("2d");
+    chartBarrasInst = new Chart(ctxBar, {
+      type: "bar",
+      data: { labels: etiquetas, datasets: [{ label: "Cantidad", data: valores, backgroundColor: colores }] },
+      options: { responsive: true, plugins: { legend: { display: false }, title: { display: true, text: "Cantidades" } } }
+    });
+
+    var ctxPie = document.getElementById("chartCircular").getContext("2d");
+    chartCircularInst = new Chart(ctxPie, {
+      type: "pie",
+      data: { labels: etiquetas, datasets: [{ data: valores, backgroundColor: colores }] },
+      options: { responsive: true, plugins: { title: { display: true, text: "Distribución" } } }
+    });
+  }
+
+  function descargarGrafico(canvasId, nombreArchivo) {
+    var chart = (canvasId === "chartBarras") ? chartBarrasInst : chartCircularInst;
+    if (!chart) return;
+    var link = document.createElement("a");
+    link.href = chart.toBase64Image();
+    link.download = nombreArchivo + ".png";
+    link.click();
   }
 
   // ---------- Arranque ----------
