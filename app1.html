@@ -648,6 +648,7 @@
 
   function consultarStats() {
     if (nivelStats === "general") { consultarStatsGeneral(); return; }
+    if (nivelStats === "grado") { consultarStatsPorGrado(); return; }
 
     var grado = document.getElementById("statsGrado").value;
     var seccion = (nivelStats === "seccion") ? document.getElementById("statsSeccion").value : "";
@@ -790,6 +791,82 @@
 
   // ---------- Estadísticas GENERAL: por sección + por grado + resumen general ----------
   var ultimoStatsGeneral = null;
+  var ultimoStatsGrado = null;
+
+  function consultarStatsPorGrado() {
+    var grado = document.getElementById("statsGrado").value;
+    var div = document.getElementById("statsResultado");
+    div.innerHTML = "Cargando...";
+    document.getElementById("statsGraficos").style.display = "none";
+
+    var rango = calcularRangoStats();
+    var url = WEBAPP_URL + "?accion=estadisticasPorGrado&desde=" + encodeURIComponent(rango.desdeTxt) + "&hasta=" + encodeURIComponent(rango.hastaTxt) + "&grado=" + encodeURIComponent(grado);
+
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+      ultimoStatsGrado = data;
+
+      var html = "<h3 style='font-size:14px; color:#1e3a5f;'>Resumen por sección de " + data.grado + "</h3>";
+      html += "<table><thead><tr><th>Sección</th><th>Estudiantes</th><th>Puntual</th><th>Tarde</th><th>Falta</th><th>Justificadas</th></tr></thead><tbody>";
+      data.secciones.forEach(function (s) {
+        html += filaStatsHtml("\"" + s.seccion + "\"", s.conteo, s.porcentajes, s.totalEstudiantes);
+      });
+      html += "</tbody></table>";
+
+      html += "<h3 style='font-size:14px; color:#1e3a5f; margin-top:18px;'>Resumen general de " + data.grado + "</h3>";
+      html += "<p style='font-size:13px; color:#555;'>Total de estudiantes: <strong>" + data.resumenGrado.totalEstudiantes + "</strong></p>";
+      html += "<div class='tarjetas-stats'>";
+      var items = [["puntual", "Puntual"], ["tarde", "Tardanza"], ["falta", "Falta"], ["justificados", "Justificadas"]];
+      items.forEach(function (it) {
+        html += "<div class='tarjeta-stat'><div class='numero'>" + data.resumenGrado.conteo[it[0]] + "</div><div class='porcentaje'>" + data.resumenGrado.porcentajes[it[0]] + "%</div><div class='etiqueta'>" + it[1] + "</div></div>";
+      });
+      html += "</div>";
+      html += "<div class='botones-export'><button class='btn-secundario' onclick='exportarStatsGradoExcel()'>📊 Descargar reporte (Excel)</button>" +
+        "<button class='btn-secundario' onclick='exportarStatsGradoPDF()'>📄 Descargar reporte (PDF)</button></div>";
+
+      div.innerHTML = html;
+      try { dibujarGraficos(data.resumenGrado.conteo); } catch (e) { document.getElementById("statsGraficos").style.display = "none"; }
+    }).catch(function (err) { div.innerHTML = "<div class='mensaje-error'>Error de conexión: " + err.message + "</div>"; });
+  }
+
+  function exportarStatsGradoExcel() {
+    if (!ultimoStatsGrado) return;
+    var wb = XLSX.utils.book_new();
+    var head = ["Sección", "Estudiantes", "Puntual", "%", "Tarde", "%", "Falta", "%", "Justificadas", "%"];
+
+    var filas = [head];
+    ultimoStatsGrado.secciones.forEach(function (s) {
+      filas.push([s.seccion, s.totalEstudiantes, s.conteo.puntual, s.porcentajes.puntual, s.conteo.tarde, s.porcentajes.tarde, s.conteo.falta, s.porcentajes.falta, s.conteo.justificados, s.porcentajes.justificados]);
+    });
+    var g = ultimoStatsGrado.resumenGrado;
+    filas.push(["TOTAL " + ultimoStatsGrado.grado, g.totalEstudiantes, g.conteo.puntual, g.porcentajes.puntual, g.conteo.tarde, g.porcentajes.tarde, g.conteo.falta, g.porcentajes.falta, g.conteo.justificados, g.porcentajes.justificados]);
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filas), ultimoStatsGrado.grado);
+    XLSX.writeFile(wb, "Estadisticas_" + ultimoStatsGrado.grado + "_" + ultimoStatsGrado.desde.replace(/\//g, "-") + "_a_" + ultimoStatsGrado.hasta.replace(/\//g, "-") + ".xlsx");
+  }
+
+  function exportarStatsGradoPDF() {
+    if (!ultimoStatsGrado) return;
+    var doc = new jspdf.jsPDF();
+    doc.setFontSize(13);
+    doc.text("I.E.P. José Abelardo Quiñones Gonzales", 14, 15);
+    doc.setFontSize(10);
+    doc.text("Estadísticas de " + ultimoStatsGrado.grado + " — Del " + ultimoStatsGrado.desde + " al " + ultimoStatsGrado.hasta, 14, 22);
+
+    var body = ultimoStatsGrado.secciones.map(function (s) {
+      return [s.seccion, String(s.totalEstudiantes), String(s.conteo.puntual), String(s.conteo.tarde), String(s.conteo.falta), String(s.conteo.justificados)];
+    });
+    var g = ultimoStatsGrado.resumenGrado;
+    body.push(["TOTAL", String(g.totalEstudiantes), String(g.conteo.puntual), String(g.conteo.tarde), String(g.conteo.falta), String(g.conteo.justificados)]);
+
+    doc.autoTable({
+      startY: 28,
+      head: [["Sección", "Est.", "Puntual", "Tarde", "Falta", "Justif."]],
+      body: body, styles: { fontSize: 9 }, headStyles: { fillColor: [30, 58, 95] }
+    });
+    doc.save("Estadisticas_" + ultimoStatsGrado.grado + "_" + ultimoStatsGrado.desde.replace(/\//g, "-") + "_a_" + ultimoStatsGrado.hasta.replace(/\//g, "-") + ".pdf");
+  }
+
 
   function filaStatsHtml(etiqueta, c, p, totalEst) {
     return "<tr><td style='text-align:left;'>" + etiqueta + "</td><td>" + totalEst + "</td>" +
