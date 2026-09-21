@@ -532,37 +532,84 @@
     if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
     div.innerHTML = "Cargando...";
 
-    fetch(WEBAPP_URL + "?accion=cuadriculaEstudiante&id=" + encodeURIComponent(id) + "&anio=" + m.anio + "&mes=" + m.mes)
+    fetch(WEBAPP_URL + "?accion=detalleEstudianteMes&id=" + encodeURIComponent(id) + "&anio=" + m.anio + "&mes=" + m.mes)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-        var estudiantes = [{ id: data.estudiante.id, nombre: data.estudiante.nombre, codigos: data.codigos }];
-        renderCuadricula("repResultado", data.dias, estudiantes);
-        ultimoReporteDatos = { tipo: "estudiante", dias: data.dias, estudiantes: estudiantes, estudianteInfo: data.estudiante, anio: m.anio, mes: m.mes };
+        renderDetalleEstudianteVertical("repResultado", data);
+        ultimoReporteDatos = { tipo: "estudianteVertical", detalle: data.detalle, estudianteInfo: data.estudiante, anio: m.anio, mes: m.mes };
         document.getElementById("repBotonesExport").style.display = "flex";
       })
       .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
   }
 
+  function renderDetalleEstudianteVertical(contenedorId, data) {
+    var div = document.getElementById(contenedorId);
+    var html = "<div style='text-align:center; margin-bottom:14px;'>" +
+      "<h3 style='margin:0; color:#1e3a5f;'>" + data.estudiante.nombre + "</h3>" +
+      "<p style='margin:4px 0 0; color:#666; font-size:13px;'>ID: " + data.estudiante.id + " — " + data.estudiante.grado + " \"" + data.estudiante.seccion + "\" — " + data.mes + "/" + data.anio + "</p>" +
+      "</div>";
+
+    html += "<table><thead><tr><th>Día</th><th>Entrada</th><th>Hora Entrada</th><th>Hora Salida</th><th>Estado Salida</th></tr></thead><tbody>";
+    data.detalle.forEach(function (f) {
+      var claseEntrada = (f.codigoEntrada === "-") ? "cod-guion" : "cod-" + f.codigoEntrada;
+      html += "<tr><td>" + f.dia + "</td>" +
+        "<td class='" + claseEntrada + "'>" + f.codigoEntrada + "</td>" +
+        "<td>" + (f.horaEntrada || "-") + "</td>" +
+        "<td>" + (f.horaSalida || "-") + "</td>" +
+        "<td>" + (f.estadoSalida || "-") + "</td></tr>";
+    });
+    html += "</tbody></table>";
+    div.innerHTML = html;
+  }
+
   function exportarReporteExcel() {
     if (!ultimoReporteDatos) return;
-    var nombreArchivo = (ultimoReporteDatos.tipo === "aula")
-      ? "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".xlsx"
-      : "Reporte_" + ultimoReporteDatos.estudianteInfo.id + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".xlsx";
+    if (ultimoReporteDatos.tipo === "estudianteVertical") {
+      var filas = [["Día", "Entrada", "Hora Entrada", "Hora Salida", "Estado Salida"]];
+      ultimoReporteDatos.detalle.forEach(function (f) {
+        filas.push([f.dia, f.codigoEntrada, f.horaEntrada || "-", f.horaSalida || "-", f.estadoSalida || "-"]);
+      });
+      var ws = XLSX.utils.aoa_to_sheet(filas);
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+      var e = ultimoReporteDatos.estudianteInfo;
+      XLSX.writeFile(wb, "Reporte_" + e.id + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".xlsx");
+      return;
+    }
+    var nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".xlsx";
     exportarCuadriculaExcel(nombreArchivo, ultimoReporteDatos.dias, ultimoReporteDatos.estudiantes, "Reporte");
   }
 
   function exportarReportePDF() {
     if (!ultimoReporteDatos) return;
-    var lineas = ["I.E.P. José Abelardo Quiñones Gonzales"];
-    var nombreArchivo;
-    if (ultimoReporteDatos.tipo === "aula") {
-      lineas.push("Reporte de asistencia — " + ultimoReporteDatos.grado + " \"" + ultimoReporteDatos.seccion + "\" — " + ultimoReporteDatos.mes + "/" + ultimoReporteDatos.anio);
-      nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".pdf";
-    } else {
-      lineas.push("Reporte de asistencia — " + ultimoReporteDatos.estudianteInfo.nombre + " (" + ultimoReporteDatos.estudianteInfo.grado + " \"" + ultimoReporteDatos.estudianteInfo.seccion + "\") — " + ultimoReporteDatos.mes + "/" + ultimoReporteDatos.anio);
-      nombreArchivo = "Reporte_" + ultimoReporteDatos.estudianteInfo.id + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".pdf";
+    if (ultimoReporteDatos.tipo === "estudianteVertical") {
+      var e = ultimoReporteDatos.estudianteInfo;
+      var doc = new jspdf.jsPDF();
+      doc.setFontSize(13);
+      doc.text("I.E.P. José Abelardo Quiñones Gonzales", 14, 15);
+      doc.setFontSize(11);
+      doc.text(e.nombre + " — ID: " + e.id, 14, 23);
+      doc.setFontSize(10);
+      doc.text(e.grado + " \"" + e.seccion + "\" — " + ultimoReporteDatos.mes + "/" + ultimoReporteDatos.anio, 14, 29);
+
+      var body = ultimoReporteDatos.detalle.map(function (f) {
+        return [String(f.dia), f.codigoEntrada, f.horaEntrada || "-", f.horaSalida || "-", f.estadoSalida || "-"];
+      });
+      doc.autoTable({
+        startY: 35,
+        head: [["Día", "Entrada", "Hora Entrada", "Hora Salida", "Estado Salida"]],
+        body: body,
+        styles: { fontSize: 9, halign: "center" },
+        headStyles: { fillColor: [30, 58, 95] }
+      });
+      doc.save("Reporte_" + e.id + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".pdf");
+      return;
     }
+
+    var lineas = ["I.E.P. José Abelardo Quiñones Gonzales"];
+    lineas.push("Reporte de asistencia — " + ultimoReporteDatos.grado + " \"" + ultimoReporteDatos.seccion + "\" — " + ultimoReporteDatos.mes + "/" + ultimoReporteDatos.anio);
+    var nombreArchivo = "Reporte_" + ultimoReporteDatos.grado + "_" + ultimoReporteDatos.seccion + "_" + ultimoReporteDatos.mes + "-" + ultimoReporteDatos.anio + ".pdf";
     exportarCuadriculaPDF(nombreArchivo, lineas, ultimoReporteDatos.dias, ultimoReporteDatos.estudiantes);
   }
 
