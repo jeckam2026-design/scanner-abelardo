@@ -621,11 +621,17 @@
       });
       html += "</div>";
       div.innerHTML = html;
-      dibujarGraficos(c);
-    }).catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
+      try {
+        dibujarGraficos(c);
+      } catch (errGrafico) {
+        document.getElementById("statsGraficos").style.display = "none";
+        div.innerHTML += "<p style='font-size:12px;color:#a65b00;'>(Los gráficos no se pudieron cargar — revisa tu conexión a internet. Las cifras de arriba sí son correctas.)</p>";
+      }
+    }).catch(function (err) { div.innerHTML = "<div class='mensaje-error'>Error de conexión: " + err.message + "</div>"; });
   }
 
   function dibujarGraficos(conteo) {
+    if (typeof Chart === "undefined") { throw new Error("Chart.js no cargó"); }
     document.getElementById("statsGraficos").style.display = "flex";
     var etiquetas = ["Puntual", "Tardanza", "Falta", "Justificadas"];
     var valores = [conteo.puntual, conteo.tarde, conteo.falta, conteo.justificados];
