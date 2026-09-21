@@ -586,8 +586,23 @@
     document.getElementById("campoStatsMes").style.display = (periodo === "mes") ? "flex" : "none";
   }
 
+  function calcularRangoStats() {
+    if (periodoStats === "dia") {
+      var fecha = isoADDMMYYYY(document.getElementById("statsFecha").value);
+      return { desdeTxt: fecha, hastaTxt: fecha };
+    }
+    var m = parseMonthInput("statsMes");
+    var hoy = new Date();
+    var esMesActual = (hoy.getFullYear() === m.anio && (hoy.getMonth() + 1) === m.mes);
+    var desdeD = new Date(m.anio, m.mes - 1, 1);
+    var hastaD = esMesActual ? hoy : new Date(m.anio, m.mes, 0);
+    return { desdeTxt: isoADDMMYYYY(fechaISO(desdeD)), hastaTxt: isoADDMMYYYY(fechaISO(hastaD)) };
+  }
+
   function consultarStats() {
-    var grado = (nivelStats !== "general") ? document.getElementById("statsGrado").value : "";
+    if (nivelStats === "general") { consultarStatsGeneral(); return; }
+
+    var grado = document.getElementById("statsGrado").value;
     var seccion = (nivelStats === "seccion") ? document.getElementById("statsSeccion").value : "";
     var div = document.getElementById("statsResultado");
     div.innerHTML = "Cargando...";
@@ -597,14 +612,8 @@
       var fecha = isoADDMMYYYY(document.getElementById("statsFecha").value);
       url = WEBAPP_URL + "?accion=estadisticasNivel&fecha=" + encodeURIComponent(fecha) + "&nivel=" + encodeURIComponent(nivelStats);
     } else {
-      var m = parseMonthInput("statsMes");
-      var hoy = new Date();
-      var esMesActual = (hoy.getFullYear() === m.anio && (hoy.getMonth() + 1) === m.mes);
-      var desdeD = new Date(m.anio, m.mes - 1, 1);
-      var hastaD = esMesActual ? hoy : new Date(m.anio, m.mes, 0);
-      var desdeTxt = isoADDMMYYYY(fechaISO(desdeD));
-      var hastaTxt = isoADDMMYYYY(fechaISO(hastaD));
-      url = WEBAPP_URL + "?accion=estadisticasRango&desde=" + encodeURIComponent(desdeTxt) + "&hasta=" + encodeURIComponent(hastaTxt) + "&nivel=" + encodeURIComponent(nivelStats);
+      var rango = calcularRangoStats();
+      url = WEBAPP_URL + "?accion=estadisticasRango&desde=" + encodeURIComponent(rango.desdeTxt) + "&hasta=" + encodeURIComponent(rango.hastaTxt) + "&nivel=" + encodeURIComponent(nivelStats);
     }
     if (grado) url += "&grado=" + encodeURIComponent(grado);
     if (seccion) url += "&seccion=" + encodeURIComponent(seccion);
@@ -730,6 +739,109 @@
     link.href = canvas.toDataURL("image/png");
     link.download = nombreArchivo + ".png";
     link.click();
+  }
+
+  // ---------- Estadísticas GENERAL: por sección + por grado + resumen general ----------
+  var ultimoStatsGeneral = null;
+
+  function filaStatsHtml(etiqueta, c, p, totalEst) {
+    return "<tr><td style='text-align:left;'>" + etiqueta + "</td><td>" + totalEst + "</td>" +
+      "<td>" + c.puntual + " (" + p.puntual + "%)</td>" +
+      "<td>" + c.tarde + " (" + p.tarde + "%)</td>" +
+      "<td>" + c.falta + " (" + p.falta + "%)</td>" +
+      "<td>" + c.justificados + " (" + p.justificados + "%)</td></tr>";
+  }
+
+  function consultarStatsGeneral() {
+    var div = document.getElementById("statsResultado");
+    div.innerHTML = "Cargando...";
+    document.getElementById("statsGraficos").style.display = "none";
+
+    var rango = calcularRangoStats();
+    var url = WEBAPP_URL + "?accion=estadisticasGeneral&desde=" + encodeURIComponent(rango.desdeTxt) + "&hasta=" + encodeURIComponent(rango.hastaTxt);
+
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+      ultimoStatsGeneral = data;
+
+      var html = "<h3 style='font-size:14px; color:#1e3a5f;'>Resumen por sección</h3>";
+      html += "<table><thead><tr><th>Grado - Sección</th><th>Estudiantes</th><th>Puntual</th><th>Tarde</th><th>Falta</th><th>Justificadas</th></tr></thead><tbody>";
+      data.secciones.forEach(function (s) {
+        html += filaStatsHtml(s.grado + " \"" + s.seccion + "\"", s.conteo, s.porcentajes, s.totalEstudiantes);
+      });
+      html += "</tbody></table>";
+
+      html += "<h3 style='font-size:14px; color:#1e3a5f; margin-top:18px;'>Resumen por grado</h3>";
+      html += "<table><thead><tr><th>Grado</th><th>Estudiantes</th><th>Puntual</th><th>Tarde</th><th>Falta</th><th>Justificadas</th></tr></thead><tbody>";
+      data.grados.forEach(function (g) {
+        html += filaStatsHtml(g.grado, g.conteo, g.porcentajes, g.totalEstudiantes);
+      });
+      html += "</tbody></table>";
+
+      html += "<h3 style='font-size:14px; color:#1e3a5f; margin-top:18px;'>Resumen general del colegio</h3>";
+      html += "<p style='font-size:13px; color:#555;'>Total de estudiantes: <strong>" + data.general.totalEstudiantes + "</strong></p>";
+      html += "<div class='tarjetas-stats'>";
+      var items = [["puntual", "Puntual"], ["tarde", "Tardanza"], ["falta", "Falta"], ["justificados", "Justificadas"]];
+      items.forEach(function (it) {
+        html += "<div class='tarjeta-stat'><div class='numero'>" + data.general.conteo[it[0]] + "</div><div class='porcentaje'>" + data.general.porcentajes[it[0]] + "%</div><div class='etiqueta'>" + it[1] + "</div></div>";
+      });
+      html += "</div>";
+      html += "<div class='botones-export'><button class='btn-secundario' onclick='exportarStatsGeneralExcel()'>📊 Descargar reporte completo (Excel)</button>" +
+        "<button class='btn-secundario' onclick='exportarStatsGeneralPDF()'>📄 Descargar reporte completo (PDF)</button></div>";
+
+      div.innerHTML = html;
+      try { dibujarGraficos(data.general.conteo); } catch (e) { document.getElementById("statsGraficos").style.display = "none"; }
+    }).catch(function (err) { div.innerHTML = "<div class='mensaje-error'>Error de conexión: " + err.message + "</div>"; });
+  }
+
+  function exportarStatsGeneralExcel() {
+    if (!ultimoStatsGeneral) return;
+    var wb = XLSX.utils.book_new();
+    var head = ["Ámbito", "Estudiantes", "Puntual", "%", "Tarde", "%", "Falta", "%", "Justificadas", "%"];
+
+    var filasSecciones = [head];
+    ultimoStatsGeneral.secciones.forEach(function (s) {
+      filasSecciones.push([s.grado + " " + s.seccion, s.totalEstudiantes, s.conteo.puntual, s.porcentajes.puntual, s.conteo.tarde, s.porcentajes.tarde, s.conteo.falta, s.porcentajes.falta, s.conteo.justificados, s.porcentajes.justificados]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filasSecciones), "Por seccion");
+
+    var filasGrados = [head];
+    ultimoStatsGeneral.grados.forEach(function (g) {
+      filasGrados.push([g.grado, g.totalEstudiantes, g.conteo.puntual, g.porcentajes.puntual, g.conteo.tarde, g.porcentajes.tarde, g.conteo.falta, g.porcentajes.falta, g.conteo.justificados, g.porcentajes.justificados]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filasGrados), "Por grado");
+
+    var gen = ultimoStatsGeneral.general;
+    var filasGeneral = [head, ["GENERAL", gen.totalEstudiantes, gen.conteo.puntual, gen.porcentajes.puntual, gen.conteo.tarde, gen.porcentajes.tarde, gen.conteo.falta, gen.porcentajes.falta, gen.conteo.justificados, gen.porcentajes.justificados]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filasGeneral), "General");
+
+    XLSX.writeFile(wb, "Estadisticas_General_" + ultimoStatsGeneral.desde.replace(/\//g, "-") + "_a_" + ultimoStatsGeneral.hasta.replace(/\//g, "-") + ".xlsx");
+  }
+
+  function exportarStatsGeneralPDF() {
+    if (!ultimoStatsGeneral) return;
+    var doc = new jspdf.jsPDF();
+    doc.setFontSize(13);
+    doc.text("I.E.P. José Abelardo Quiñones Gonzales", 14, 15);
+    doc.setFontSize(10);
+    doc.text("Reporte estadístico general — Del " + ultimoStatsGeneral.desde + " al " + ultimoStatsGeneral.hasta, 14, 22);
+
+    var head = [["Ámbito", "Est.", "Puntual", "Tarde", "Falta", "Justif."]];
+    var filaTxt = function (etq, c) { return [etq, "", c.puntual + "", c.tarde + "", c.falta + "", c.justificados + ""]; };
+
+    var bodySecciones = ultimoStatsGeneral.secciones.map(function (s) { var f = filaTxt(s.grado + " " + s.seccion, s.conteo); f[1] = String(s.totalEstudiantes); return f; });
+    doc.autoTable({ startY: 28, head: [["Por Sección", "Est.", "Puntual", "Tarde", "Falta", "Justif."]], body: bodySecciones, styles: { fontSize: 8 }, headStyles: { fillColor: [30, 58, 95] } });
+
+    var y1 = doc.lastAutoTable.finalY + 8;
+    var bodyGrados = ultimoStatsGeneral.grados.map(function (g) { var f = filaTxt(g.grado, g.conteo); f[1] = String(g.totalEstudiantes); return f; });
+    doc.autoTable({ startY: y1, head: [["Por Grado", "Est.", "Puntual", "Tarde", "Falta", "Justif."]], body: bodyGrados, styles: { fontSize: 8 }, headStyles: { fillColor: [30, 58, 95] } });
+
+    var y2 = doc.lastAutoTable.finalY + 8;
+    var gen = ultimoStatsGeneral.general;
+    var bodyGeneral = [["GENERAL", String(gen.totalEstudiantes), String(gen.conteo.puntual), String(gen.conteo.tarde), String(gen.conteo.falta), String(gen.conteo.justificados)]];
+    doc.autoTable({ startY: y2, head: [["Resumen", "Est.", "Puntual", "Tarde", "Falta", "Justif."]], body: bodyGeneral, styles: { fontSize: 8 }, headStyles: { fillColor: [30, 58, 95] } });
+
+    doc.save("Estadisticas_General_" + ultimoStatsGeneral.desde.replace(/\//g, "-") + "_a_" + ultimoStatsGeneral.hasta.replace(/\//g, "-") + ".pdf");
   }
 
   // ---------- Arranque ----------
