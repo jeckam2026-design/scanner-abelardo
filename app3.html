@@ -145,6 +145,7 @@
   .FALTA { background: #fbdcdc; color: #b3261e; }
   .FUERA-DE-HORARIO { background: #ffe4c4; color: #a65b00; }
   .SIN-DATO { background: #eceff1; color: #666; }
+  .JUSTIFICADO { background: #dbe9ff; color: #1a4d8a; }
   #cargando { text-align: center; font-size: 13px; color: #666; padding: 10px; display: none; }
   .pie {
     text-align: center;
@@ -235,6 +236,14 @@
     return estado.replace(/\s+/g, "-").replace("Ó","O");
   }
 
+  // Muestra "JUSTIFICADO" en vez de FALTA/TARDE cuando ya fue justificado por un auxiliar
+  function textoEstadoEntrada(estadoEntrada, justificadoPor) {
+    if ((estadoEntrada === "FALTA" || estadoEntrada === "TARDE") && justificadoPor) {
+      return { texto: "JUSTIFICADO", clase: "JUSTIFICADO" };
+    }
+    return { texto: estadoEntrada || "-", clase: claseEstado(estadoEntrada) };
+  }
+
   function fechaISOaDDMMYYYY(iso) {
     if (!iso) return "";
     var p = iso.split("-"); // yyyy-mm-dd
@@ -309,10 +318,11 @@
 
     data.registros.forEach(function (r) {
       var fila = document.createElement("tr");
+      var estEnt = textoEstadoEntrada(r.estadoEntrada, r.justificadoPor);
       fila.innerHTML =
         "<td>" + r.fecha + "</td>" +
         "<td>" + (r.horaEntrada || "-") + "</td>" +
-        "<td><span class='estado " + claseEstado(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
+        "<td><span class='estado " + estEnt.clase + "'>" + estEnt.texto + "</span></td>" +
         "<td>" + (r.horaSalida || "-") + "</td>" +
         "<td><span class='estado " + claseEstado(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>";
       cuerpo.appendChild(fila);
