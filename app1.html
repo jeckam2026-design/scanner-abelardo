@@ -122,6 +122,7 @@
     <button class="tab-btn" data-tab="tabJustificar" onclick="cambiarTab('tabJustificar')">Justificaciones</button>
     <button class="tab-btn" data-tab="tabReportes" onclick="cambiarTab('tabReportes')">Reportes</button>
     <button class="tab-btn" data-tab="tabStats" onclick="cambiarTab('tabStats')">Estadísticas</button>
+    <button class="tab-btn" data-tab="tabFicha" onclick="cambiarTab('tabFicha')">Datos del Estudiante</button>
   </nav>
 
   <!-- ==================== TAB 1: ASISTENCIA ==================== -->
@@ -251,6 +252,15 @@
         <div class="botones-export"><button class="btn-secundario" onclick="descargarGrafico('chartCircular','grafico_circular')">⬇️ Descargar imagen</button></div>
       </div>
     </div>
+  </div>
+
+  <!-- ==================== TAB 5: DATOS DEL ESTUDIANTE ==================== -->
+  <div id="tabFicha" class="contenido-tab">
+    <div class="fila-filtros">
+      <div class="campo"><label>ID del estudiante</label><input type="text" id="fichaId" placeholder="Ej: JAQ001"></div>
+      <button class="btn-primario" onclick="buscarFichaEstudiante()">Buscar</button>
+    </div>
+    <div id="fichaResultado"></div>
   </div>
 
   <div style="text-align:center; font-size:11px; color:#888; padding:16px 8px 24px;">
@@ -966,6 +976,38 @@
     doc.autoTable({ startY: y2, head: [["Resumen", "Est.", "Puntual", "Tarde", "Falta", "Justif."]], body: bodyGeneral, styles: { fontSize: 8 }, headStyles: { fillColor: [30, 58, 95] } });
 
     doc.save("Estadisticas_General_" + ultimoStatsGeneral.desde.replace(/\//g, "-") + "_a_" + ultimoStatsGeneral.hasta.replace(/\//g, "-") + ".pdf");
+  }
+
+  // ==================== TAB 5: DATOS DEL ESTUDIANTE ====================
+  function buscarFichaEstudiante() {
+    var id = document.getElementById("fichaId").value.trim();
+    var div = document.getElementById("fichaResultado");
+    if (!id) { div.innerHTML = "<div class='mensaje-error'>Ingrese el ID del estudiante.</div>"; return; }
+    div.innerHTML = "Cargando...";
+
+    fetch(WEBAPP_URL + "?accion=fichaEstudiante&id=" + encodeURIComponent(id))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        var e = data.estudiante;
+        var campos = [
+          ["ID", e["ID"]], ["Apellidos y Nombres", e["APELLIDOS_NOMBRES"]],
+          ["Grado", e["GRADO"]], ["Sección", e["SECCION"]], ["DNI", e["DNI"]],
+          ["Nombre del Tutor", e["NOMBRE_TUTOR"]], ["Celular del Tutor", e["CEL_TUTOR"]],
+          ["Apoderado", e["APODERADO"]], ["Celular del Apoderado", e["CEL_APODERADO"]],
+          ["Dirección", e["DIRECCION"]], ["Enfermedad / Alergia", e["ENFERMEDAD"]],
+          ["N° de Orden", e["NRO_ORDEN"]], ["Estado", e["ESTADO"]],
+          ["Fecha de Registro", e["FECHA_REGISTRO"]], ["Observaciones", e["OBSERVACIONES"]]
+        ];
+        var html = "<table><tbody>";
+        campos.forEach(function (c) {
+          html += "<tr><td style='text-align:left; font-weight:bold; background:#eef1f5; width:220px;'>" + c[0] + "</td>" +
+            "<td style='text-align:left;'>" + (c[1] || "-") + "</td></tr>";
+        });
+        html += "</tbody></table>";
+        div.innerHTML = html;
+      })
+      .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
   }
 
   // ---------- Arranque ----------
