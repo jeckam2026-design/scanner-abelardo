@@ -53,6 +53,7 @@
   .e-FALTA { background: #fbdcdc; color: #b3261e; }
   .e-FUERA-DE-HORARIO { background: #ffe4c4; color: #a65b00; }
   .e-SIN-REGISTRO, .e-NO-REGISTRO-SALIDA { background: #eceff1; color: #666; }
+  .e-JUSTIFICADO { background: #dbe9ff; color: #1a4d8a; }
 
   .mensaje-ok { background: #d9f2df; color: #1a7a3a; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
   .mensaje-error { background: #fdecea; color: #b3261e; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
@@ -285,6 +286,15 @@
   function ultimoDiaMes() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
   function isoADDMMYYYY(iso) { if (!iso) return ""; var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
   function claseCss(estado) { return "e-" + String(estado || "").replace(/\s+/g, "-").replace("Ó", "O"); }
+
+  // Devuelve el texto/clase a mostrar para el estado de ENTRADA, mostrando "JUSTIFICADO"
+  // en vez de FALTA/TARDE cuando ya fue justificado por un auxiliar.
+  function textoEstadoEntrada(estadoEntrada, justificadoPor) {
+    if ((estadoEntrada === "FALTA" || estadoEntrada === "TARDE") && justificadoPor) {
+      return { texto: "JUSTIFICADO", clase: "e-JUSTIFICADO" };
+    }
+    return { texto: estadoEntrada || "-", clase: claseCss(estadoEntrada) };
+  }
   function parseMonthInput(id) {
     var v = document.getElementById(id).value; // "YYYY-MM"
     if (!v) { var d = new Date(); return { anio: d.getFullYear(), mes: d.getMonth() + 1 }; }
@@ -419,8 +429,9 @@
         if (data.registros.length === 0) { html += "<p>No hay registros en ese rango.</p>"; div.innerHTML = html; return; }
         html += "<table><thead><tr><th>Fecha</th><th>Entrada</th><th>Estado</th><th>Salida</th><th>Estado</th><th>Justificado por</th></tr></thead><tbody>";
         data.registros.forEach(function (r) {
+          var estEnt = textoEstadoEntrada(r.estadoEntrada, r.justificadoPor);
           html += "<tr><td>" + r.fecha + "</td><td>" + (r.horaEntrada || "-") + "</td>" +
-            "<td><span class='estado " + claseCss(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
+            "<td><span class='estado " + estEnt.clase + "'>" + estEnt.texto + "</span></td>" +
             "<td>" + (r.horaSalida || "-") + "</td><td><span class='estado " + claseCss(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>" +
             "<td>" + (r.justificadoPor || "-") + "</td></tr>";
         });
@@ -473,7 +484,7 @@
           else accionHtml = "-";
 
           html += "<tr><td>" + r.fecha + "</td>" +
-            "<td><span class='estado " + claseCss(r.estadoEntrada) + "'>" + (r.estadoEntrada || "-") + "</span></td>" +
+            "<td><span class='estado " + textoEstadoEntrada(r.estadoEntrada, r.justificadoPor).clase + "'>" + textoEstadoEntrada(r.estadoEntrada, r.justificadoPor).texto + "</span></td>" +
             "<td><span class='estado " + claseCss(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>" +
             "<td>" + accionHtml + "</td></tr>";
 
