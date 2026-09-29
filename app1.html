@@ -287,6 +287,25 @@
   function isoADDMMYYYY(iso) { if (!iso) return ""; var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
   function claseCss(estado) { return "e-" + String(estado || "").replace(/\s+/g, "-").replace("Ó", "O"); }
 
+  // Sábado/Domingo no tienen clases: se quitan esas columnas/filas de toda
+  // vista de asistencia (cuadrícula por aula y detalle vertical por
+  // estudiante), sin importar lo que haya devuelto el servidor.
+  function esDiaFinDeSemana(anio, mes, dia) { var dw = new Date(anio, mes - 1, dia).getDay(); return dw === 0 || dw === 6; }
+
+  function filtrarCuadriculaLaborable(dias, estudiantes, anio, mes) {
+    var indicesValidos = [];
+    dias.forEach(function (d, i) { if (!esDiaFinDeSemana(anio, mes, d)) indicesValidos.push(i); });
+    var diasFiltrados = indicesValidos.map(function (i) { return dias[i]; });
+    var estudiantesFiltrados = estudiantes.map(function (e) {
+      return { id: e.id, nombre: e.nombre, codigos: indicesValidos.map(function (i) { return e.codigos[i]; }) };
+    });
+    return { dias: diasFiltrados, estudiantes: estudiantesFiltrados };
+  }
+
+  function filtrarDetalleLaborable(detalle, anio, mes) {
+    return detalle.filter(function (f) { return !esDiaFinDeSemana(anio, mes, f.dia); });
+  }
+
   // Devuelve el texto/clase a mostrar para el estado de ENTRADA, mostrando "JUSTIFICADO"
   // en vez de FALTA/TARDE cuando ya fue justificado por un auxiliar.
   function textoEstadoEntrada(estadoEntrada, justificadoPor) {
@@ -452,7 +471,8 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-        renderCuadricula("asisAulaResultado", data.dias, data.estudiantes);
+        var f = filtrarCuadriculaLaborable(data.dias, data.estudiantes, m.anio, m.mes);
+        renderCuadricula("asisAulaResultado", f.dias, f.estudiantes);
       })
       .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
   }
@@ -539,8 +559,9 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
-        renderCuadricula("repResultado", data.dias, data.estudiantes);
-        ultimoReporteDatos = { tipo: "aula", dias: data.dias, estudiantes: data.estudiantes, grado: grado, seccion: seccion, anio: m.anio, mes: m.mes };
+        var f = filtrarCuadriculaLaborable(data.dias, data.estudiantes, m.anio, m.mes);
+        renderCuadricula("repResultado", f.dias, f.estudiantes);
+        ultimoReporteDatos = { tipo: "aula", dias: f.dias, estudiantes: f.estudiantes, grado: grado, seccion: seccion, anio: m.anio, mes: m.mes };
         document.getElementById("repBotonesExport").style.display = "flex";
       })
       .catch(function () { div.innerHTML = "<div class='mensaje-error'>Error de conexión.</div>"; });
@@ -557,6 +578,7 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.ok) { div.innerHTML = "<div class='mensaje-error'>" + (data.mensaje || "Error") + "</div>"; return; }
+        data.detalle = filtrarDetalleLaborable(data.detalle, m.anio, m.mes);
         renderDetalleEstudianteVertical("repResultado", data);
         ultimoReporteDatos = { tipo: "estudianteVertical", detalle: data.detalle, estudianteInfo: data.estudiante, anio: m.anio, mes: m.mes };
         document.getElementById("repBotonesExport").style.display = "flex";
