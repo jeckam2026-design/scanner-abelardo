@@ -200,6 +200,36 @@
     if (registros[idQR]) { delete registros[idQR][tipo]; localStorage.setItem(clave, JSON.stringify(registros)); }
   }
 
+  // ---------- Sincronización entre tabletas ----------
+  // Como cada tableta guarda su propio registro local, un estudiante que
+  // marca entrada en una tableta y sale en otra no se reconoce de
+  // inmediato entre equipos. Para que eso sea instantáneo la mayoría de
+  // las veces (y no dependa solo del "caso ambiguo" que consulta al
+  // servidor al momento), cada tableta se sincroniza sola cada 15
+  // segundos, preguntando al servidor quién ya registró hoy y fusionando
+  // esa información con su memoria local.
+  var INTERVALO_SYNC_MS = 15000;
+  function sincronizarEstadoHoy() {
+    fetch(WEBAPP_URL + "?accion=estadoAsistenciaHoy")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok || !data.estado) return;
+        var clave = "asistencia_" + fechaHoyClave();
+        var registros = getRegistrosHoy();
+        Object.keys(data.estado).forEach(function (id) {
+          registros[id] = registros[id] || {};
+          if (data.estado[id].entrada) registros[id]["ENTRADA"] = true;
+          if (data.estado[id].salida) registros[id]["SALIDA"] = true;
+        });
+        localStorage.setItem(clave, JSON.stringify(registros));
+      })
+      .catch(function () { /* si falla, no pasa nada: se sigue intentando cada 15s */ });
+  }
+  function iniciarSincronizacionPeriodica() {
+    sincronizarEstadoHoy();
+    setInterval(sincronizarEstadoHoy, INTERVALO_SYNC_MS);
+  }
+
   // ---------- CONFIG (una sola vez al abrir; botón manual para recargar) ----------
   function cargarConfig() {
     document.getElementById("vistaLogin").style.display = "none";
@@ -226,6 +256,7 @@
       document.getElementById("btnResetearTodo").style.display = "inline-block";
     }
     iniciarEscaner();
+    iniciarSincronizacionPeriodica();
   }
 
   function actualizarReloj() {
