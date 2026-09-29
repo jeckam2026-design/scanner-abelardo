@@ -142,6 +142,7 @@
   // ---------- Utilidades de hora local ----------
   function minutosDesdeTexto(txt) { var p = String(txt).split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
   function horaActualMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+  function esFinDeSemana() { var dia = new Date().getDay(); return dia === 0 || dia === 6; } // 0=domingo, 6=sábado
   function horaActualTexto() {
     var d = new Date();
     return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
@@ -273,6 +274,10 @@
   }
 
   function onEscaneoExitoso(idDetectado) {
+    // Fin de semana: el sistema rechaza internamente, SIN mostrar ningún
+    // mensaje ni pantalla al usuario. La cámara sigue funcionando como si
+    // no hubiera detectado nada.
+    if (esFinDeSemana()) return;
     if (procesando) return;
     var idQR = idDetectado.trim().toUpperCase();
     if (idQR === ultimoIdMostrado) return;
@@ -294,28 +299,43 @@
       return;
     }
 
+    var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
+    var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
+
+    // ---------------------------------------------------------------
+    // CASO AMBIGUO — este dispositivo (este teléfono/tablet) no tiene
+    // guardada la ENTRADA de hoy para este estudiante, pero ya pasó la
+    // hora de entrada. Esto puede significar dos cosas muy distintas:
+    //   a) el estudiante de verdad no registró su entrada, o
+    //   b) SÍ la registró, pero en OTRO dispositivo de escaneo (otro
+    //      celular/tablet), así que localStorage de ESTE dispositivo
+    //      nunca se enteró.
+    // Adivinar aquí fue exactamente el bug reportado: se mostraba
+    // "NO PUEDES MARCAR SALIDA, PORQUE NO REGISTRASTE ENTRADA" a
+    // estudiantes que sí habían marcado PUNTUAL/TARDE en otro equipo,
+    // aunque el Sheet terminaba registrando bien la salida en segundo
+    // plano (la corrección llegaba tarde, después de que la pantalla ya
+    // había vuelto a modo cámara). Por eso, en este caso NO se adivina:
+    // se consulta al servidor (única fuente confiable) y se muestra
+    // directamente su respuesta real.
+    // ---------------------------------------------------------------
+    if (!yaTieneEntrada && minActual > tardeHasta) {
+      consultarServidorYAvisar(idQR);
+      return;
+    }
+
     if (!yaTieneEntrada) {
       var puntualDesde = minutosDesdeTexto(CFG.HORA_PUNTUAL_DESDE);
       if (minActual < puntualDesde) {
         mostrarResultado({ ok: false, mensaje: "AÚN NO ES HORA DE INGRESAR" }, idQR);
         return;
       }
-      var puntualHasta = minutosDesdeTexto(CFG.HORA_PUNTUAL_HASTA);
-      var tardeHasta = minutosDesdeTexto(CFG.HORA_TARDE_HASTA);
-
-      var estado, mensajeEntrada;
-      if (minActual <= puntualHasta) { estado = "PUNTUAL"; mensajeEntrada = null; }
-      else if (minActual <= tardeHasta) { estado = "TARDE"; mensajeEntrada = null; }
-      else {
-        estado = "FALTA";
-        var salidaDesdeParaMsg = minutosDesdeTexto(CFG.HORA_SALIDA_DESDE);
-        mensajeEntrada = (minActual >= salidaDesdeParaMsg)
-          ? "NO PUEDES MARCAR SALIDA, PORQUE NO REGISTRASTE ENTRADA"
-          : "YA ES MUY TARDE, JUSTIFICA CON TU AUXILIAR";
-      }
-
+      // Aquí sí es seguro decidir localmente: estamos dentro de la
+      // ventana de entrada (minActual <= tardeHasta), así que no hay
+      // ambigüedad posible con una salida de otro dispositivo.
+      var estado = (minActual <= puntualHasta) ? "PUNTUAL" : "TARDE";
       guardarRegistroHoy(idQR, "ENTRADA");
-      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, hora: horaTxt, mensaje: mensajeEntrada }, idQR);
+      mostrarResultado({ ok: true, tipo: "ENTRADA", estado: estado, hora: horaTxt, mensaje: null }, idQR);
       enviarAlServidorEnSegundoPlano(idQR, "ENTRADA", estado);
 
     } else {
@@ -332,6 +352,51 @@
       mostrarResultado({ ok: true, tipo: "SALIDA", estado: estadoSalida, mensaje: mensajeSalida, hora: horaTxt }, idQR);
       enviarAlServidorEnSegundoPlano(idQR, "SALIDA", estadoSalida);
     }
+  }
+
+  // Muestra una pantalla neutral de "Verificando..." mientras se resuelve
+  // el caso ambiguo consultando directamente al servidor.
+  function mostrarCargandoVerificacion(idQR) {
+    document.getElementById("vistaEscaneo").style.display = "none";
+    document.getElementById("vistaResultado").style.display = "flex";
+    if (timeoutResumen) { clearTimeout(timeoutResumen); timeoutResumen = null; }
+
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    var detalleDiv = document.getElementById("detalleEstudiante");
+
+    icono.className = "icono-resultado icono-error";
+    icono.textContent = "…";
+    nombreDiv.textContent = idQR;
+    detalleDiv.textContent = "Un momento";
+    estadoDiv.className = "fondo-error";
+    estadoDiv.textContent = "Verificando...";
+    document.getElementById("contadorReset").textContent = "";
+  }
+
+  // Resuelve el caso ambiguo consultando directamente al servidor
+  // (única fuente confiable cuando este dispositivo no sabe si el
+  // estudiante ya registró su entrada en otro equipo) y muestra su
+  // respuesta real, sin adivinar nada localmente.
+  function consultarServidorYAvisar(idQR) {
+    mostrarCargandoVerificacion(idQR);
+    var dbg = document.getElementById("debugInfo");
+    fetch(WEBAPP_URL + "?accion=registrarAsistencia&id=" + encodeURIComponent(idQR))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (dbg) dbg.textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
+        if (data.ok && data.tipo) {
+          guardarRegistroHoy(idQR, data.tipo);
+          mostrarResultado(data, idQR);
+        } else {
+          mostrarResultado({ ok: false, mensaje: (data && data.mensaje) || "No se pudo registrar." }, idQR);
+        }
+      })
+      .catch(function (err) {
+        if (dbg) dbg.textContent = "ERROR DE RED (" + idQR + "): " + err.message;
+        mostrarResultado({ ok: false, mensaje: "Error de conexión. Intenta de nuevo." }, idQR);
+      });
   }
 
   // Envía el registro real en segundo plano y AUTOCORRIGE si el servidor determinó algo distinto
