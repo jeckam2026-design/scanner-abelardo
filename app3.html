@@ -250,6 +250,17 @@
     return p[2] + "/" + p[1] + "/" + p[0];
   }
 
+  // Sábado y domingo no tienen clases: se quitan esas filas de la tabla
+  // de asistencia que ve el padre de familia, sin importar lo que haya
+  // devuelto el servidor.
+  function esFechaFinDeSemana(fechaDDMMYYYY) {
+    if (!fechaDDMMYYYY) return false;
+    var p = fechaDDMMYYYY.split("/"); // dd/mm/yyyy
+    if (p.length !== 3) return false;
+    var dw = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10)).getDay();
+    return dw === 0 || dw === 6;
+  }
+
   function consultar() {
     var id = document.getElementById("inputId").value.trim();
     var dni = document.getElementById("inputDni").value.trim();
@@ -311,12 +322,14 @@
     var cuerpo = document.getElementById("cuerpoTabla");
     cuerpo.innerHTML = "";
 
-    if (data.registros.length === 0) {
+    var registrosLaborables = data.registros.filter(function (r) { return !esFechaFinDeSemana(r.fecha); });
+
+    if (registrosLaborables.length === 0) {
       cuerpo.innerHTML = "<tr><td colspan='5'>No hay registros en este rango de fechas.</td></tr>";
       return;
     }
 
-    data.registros.forEach(function (r) {
+    registrosLaborables.forEach(function (r) {
       var fila = document.createElement("tr");
       var estEnt = textoEstadoEntrada(r.estadoEntrada, r.justificadoPor);
       fila.innerHTML =
