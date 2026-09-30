@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MODO EMERGENCIA - I.E.P. José Abelardo Quiñones Gonzales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #5a1a1a;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+  .pantalla {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; padding: 16px; text-align: center; color: #fff;
+  }
+  header {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 10px 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: rgba(0,0,0,0.25);
+    z-index: 5;
+  }
+  header h1 { font-size: 15px; margin: 0; line-height: 1.2; }
+  header .aviso { font-size: 12px; font-weight: bold; color: #ffd666; margin: 0; }
+  #relojReloj { position: absolute; top: 10px; right: 16px; font-size: 14px; opacity: 0.85; z-index: 5; }
+
+  #vistaCarga { display: flex; }
+
+  #vistaLogin { display: none; }
+  #vistaLogin .caja { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 26px 24px; width: 300px; max-width: 85vw; }
+  #vistaLogin h2 { margin: 0 0 16px; font-size: 17px; }
+  #vistaLogin input { width: 100%; padding: 11px; margin-top: 8px; border: none; border-radius: 6px; font-size: 14px; }
+  #vistaLogin button { width: 100%; padding: 12px; margin-top: 16px; border: none; border-radius: 6px; background: #d9a13c; color: #1e3a5f; font-weight: bold; font-size: 15px; cursor: pointer; }
+  #vistaLogin button:disabled { opacity: 0.6; }
+  #errorLogin { color: #ffb3b3; font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  #vistaEscaneo { display: none; position: fixed; top:0; left:0; right:0; bottom:0; padding:0; justify-content:flex-start; }
+  #lector { width: 100vw !important; height: 100vh !important; overflow: hidden; }
+  #lector > div { width: 100% !important; height: 100% !important; }
+  #lector video { width: 100% !important; height: 100% !important; object-fit: cover !important; transform: scaleX(-1); -webkit-transform: scaleX(-1); }
+  #vistaEscaneo p.instruccion {
+    position: absolute; bottom: 60px; left: 0; right: 0; margin: 0; font-size: 16px; opacity: 0.95;
+    text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); z-index: 6;
+  }
+  #vistaEscaneo p.instruccion strong { display: block; font-size: 20px; margin-bottom: 4px; color: #ffd666; }
+  #panelTop {
+    position: absolute; top: 68px; left: 8px; right: 8px; z-index: 6;
+    background: rgba(0,0,0,0.5); border-radius: 8px; padding: 6px 10px;
+  }
+  #sesionActiva { font-size: 12px; opacity: 0.9; }
+  #debugInfo { font-size: 11px; opacity: 0.85; margin-top: 4px; word-break: break-word; }
+  #btnCerrarSesion {
+    position: absolute; bottom: 10px; right: 16px; z-index: 6;
+    font-size: 11px; opacity: 0.6; color: #fff; background: none; border: none; cursor: pointer;
+  }
+
+  #vistaResultado { display: none; }
+  .icono-resultado {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 60px; margin-bottom: 14px;
+    background: #2fa84f;
+  }
+  .icono-error { background: #7f8c8d; }
+  #nombreEstudiante { font-size: 24px; font-weight: bold; margin: 6px 0 2px; }
+  #detalleEstudiante { font-size: 15px; opacity: 0.85; margin-bottom: 10px; }
+  #estadoTexto { font-size: 22px; font-weight: bold; padding: 8px 20px; border-radius: 30px; margin-top: 4px; background: rgba(47,168,79,0.3); }
+  .fondo-error { background: rgba(127,140,141,0.3); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>I.E.P. José Abelardo Quiñones Gonzales</h1>
+  <p class="aviso">⚠️ MODO EMERGENCIA — Registra a todos como PUNTUAL, sin importar la hora</p>
+</header>
+<div id="relojReloj"></div>
+
+<div class="pantalla" id="vistaCarga"><p>Cargando...</p></div>
+
+<div class="pantalla" id="vistaLogin">
+  <div class="caja">
+    <h2>⚠️ Acceso de emergencia (solo SUPERADMIN)</h2>
+    <input type="text" id="loginNombre" placeholder="Nombre completo (usuario)">
+    <input type="text" id="loginDni" placeholder="DNI (clave)">
+    <button id="btnLogin" onclick="intentarLogin()">Ingresar</button>
+    <div id="errorLogin"></div>
+  </div>
+  <div style="font-size:11px; opacity:0.6; margin-top:18px; text-align:center;">
+    Desarrollado por: José Carlos Huamaní Quicaño · Cel. 954 000 684 · JECKAM Academy © 2026
+  </div>
+</div>
+
+<div class="pantalla" id="vistaEscaneo">
+  <div id="lector"></div>
+  <p class="instruccion"><strong>⚠️ MODO EMERGENCIA</strong>Acerca el carnet — se marcará PUNTUAL sin importar la hora</p>
+  <div id="panelTop">
+    <div id="sesionActiva"></div>
+    <div id="debugInfo"></div>
+  </div>
+</div>
+
+<div class="pantalla" id="vistaResultado">
+  <div class="icono-resultado" id="iconoResultado">✔</div>
+  <div id="nombreEstudiante">—</div>
+  <div id="detalleEstudiante">—</div>
+  <div id="estadoTexto">—</div>
+  <div style="font-size:10px; opacity:0.4; margin-top:16px;">José Carlos Huamaní Quicaño · 954 000 684 · JECKAM Academy © 2026</div>
+</div>
+
+<button id="btnCerrarSesion" onclick="cerrarSesion()">Cerrar sesión</button>
+
+<script>
+  var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwbFz2SlvxX-gbRIf9pjTBkgw4qZLZLwLicssIAKWYROEZqkDXaIguMiyXy3MkjsddC/exec";
+
+  var procesando = false;
+  var html5QrcodeScanner;
+  var USUARIO_ACTIVO = null;
+  var ultimoIdMostrado = null;
+  var timeoutResumen = null;
+
+  function guardarSesion(u) { sessionStorage.setItem("sesionEmergencia", JSON.stringify(u)); }
+  function leerSesion() { var s = sessionStorage.getItem("sesionEmergencia"); return s ? JSON.parse(s) : null; }
+  function cerrarSesion() {
+    sessionStorage.removeItem("sesionEmergencia");
+    if (html5QrcodeScanner) { html5QrcodeScanner.stop().catch(function(){}); }
+    location.reload();
+  }
+
+  function intentarLogin() {
+    var nombre = document.getElementById("loginNombre").value.trim();
+    var dni = document.getElementById("loginDni").value.trim();
+    var err = document.getElementById("errorLogin");
+    err.textContent = "";
+    if (!nombre || !dni) { err.textContent = "Ingrese usuario y DNI."; return; }
+
+    document.getElementById("btnLogin").disabled = true;
+    fetch(WEBAPP_URL + "?accion=login&nombre=" + encodeURIComponent(nombre) + "&dni=" + encodeURIComponent(dni))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        document.getElementById("btnLogin").disabled = false;
+        if (!data.ok) { err.textContent = data.mensaje || "Usuario o clave incorrectos."; return; }
+        if (data.usuario.rol !== "SUPERADMIN") {
+          err.textContent = "Solo SUPERADMIN puede usar el modo de emergencia."; return;
+        }
+        USUARIO_ACTIVO = data.usuario;
+        guardarSesion(USUARIO_ACTIVO);
+        mostrarPantallaEscaneo();
+      })
+      .catch(function () { document.getElementById("btnLogin").disabled = false; err.textContent = "Error de conexión."; });
+  }
+
+  function mostrarPantallaEscaneo() {
+    document.getElementById("vistaCarga").style.display = "none";
+    document.getElementById("vistaLogin").style.display = "none";
+    document.getElementById("vistaEscaneo").style.display = "flex";
+    document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre + " — MODO EMERGENCIA";
+    document.getElementById("debugInfo").textContent = "Cada escaneo se registrará como PUNTUAL, sin revisar la hora.";
+    iniciarEscaner();
+  }
+
+  function actualizarReloj() {
+    var ahora = new Date();
+    document.getElementById("relojReloj").textContent =
+      ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  setInterval(actualizarReloj, 1000);
+  actualizarReloj();
+
+  function iniciarEscaner() {
+    html5QrcodeScanner = new Html5Qrcode("lector");
+    var config = { fps: 20, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
+    html5QrcodeScanner.start({ facingMode: "user" }, config, onEscaneoExitoso, function () {})
+      .then(forzarVideoPantallaCompleta)
+      .catch(function () {
+        Html5Qrcode.getCameras().then(function (camaras) {
+          if (camaras && camaras.length) {
+            html5QrcodeScanner.start(camaras[0].id, config, onEscaneoExitoso, function () {}).then(forzarVideoPantallaCompleta);
+          }
+        });
+      });
+  }
+
+  function forzarVideoPantallaCompleta() {
+    setTimeout(function () {
+      var contenedor = document.getElementById("lector");
+      var video = contenedor ? contenedor.querySelector("video") : null;
+      if (video) {
+        video.removeAttribute("width"); video.removeAttribute("height");
+        video.style.setProperty("width", "100vw", "important");
+        video.style.setProperty("height", "100vh", "important");
+        video.style.setProperty("object-fit", "cover", "important");
+        video.style.setProperty("position", "fixed", "important");
+        video.style.setProperty("top", "0", "important");
+        video.style.setProperty("left", "0", "important");
+      }
+      if (contenedor) {
+        contenedor.querySelectorAll("div").forEach(function (d) {
+          d.style.setProperty("width", "100%", "important");
+          d.style.setProperty("height", "100%", "important");
+        });
+      }
+    }, 300);
+  }
+
+  function onEscaneoExitoso(idDetectado) {
+    if (procesando) return;
+    var idQR = idDetectado.trim().toUpperCase();
+    if (idQR === ultimoIdMostrado) return;
+    procesando = true;
+    ultimoIdMostrado = idQR;
+    registrarComoEmergencia(idQR);
+  }
+
+  function registrarComoEmergencia(idQR) {
+    var dbg = document.getElementById("debugInfo");
+    fetch(WEBAPP_URL + "?accion=registrarEmergencia&id=" + encodeURIComponent(idQR) +
+          "&rol=" + encodeURIComponent(USUARIO_ACTIVO.rol) + "&usuario=" + encodeURIComponent(USUARIO_ACTIVO.nombre))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (dbg) dbg.textContent = "Última respuesta (" + idQR + "): " + JSON.stringify(data);
+        mostrarResultado(data, idQR);
+      })
+      .catch(function (err) {
+        if (dbg) dbg.textContent = "ERROR DE RED (" + idQR + "): " + err.message;
+        mostrarResultado({ ok: false, mensaje: "Error de conexión. Intenta de nuevo." }, idQR);
+      });
+  }
+
+  function mostrarResultado(data, idQR) {
+    document.getElementById("vistaEscaneo").style.display = "none";
+    document.getElementById("vistaResultado").style.display = "flex";
+
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    var nombreDiv = document.getElementById("nombreEstudiante");
+    var detalleDiv = document.getElementById("detalleEstudiante");
+
+    icono.className = "icono-resultado";
+    estadoDiv.className = "";
+    nombreDiv.textContent = idQR;
+
+    if (!data.ok) {
+      icono.classList.add("icono-error");
+      icono.textContent = "✖";
+      detalleDiv.textContent = "No se pudo registrar";
+      estadoDiv.classList.add("fondo-error");
+      estadoDiv.textContent = data.mensaje || "Error desconocido";
+    } else {
+      icono.textContent = "✔";
+      detalleDiv.textContent = "Registrado como PUNTUAL (emergencia) — " + data.hora;
+      estadoDiv.textContent = data.mensaje || "PUNTUAL";
+    }
+
+    if (timeoutResumen) clearTimeout(timeoutResumen);
+    timeoutResumen = setTimeout(volverAEscanear, 900);
+  }
+
+  function volverAEscanear() {
+    document.getElementById("vistaResultado").style.display = "none";
+    document.getElementById("vistaEscaneo").style.display = "flex";
+    procesando = false;
+    setTimeout(function () { ultimoIdMostrado = null; }, 2000);
+    html5QrcodeScanner.resume();
+  }
+
+  window.onload = function () {
+    var sesion = leerSesion();
+    document.getElementById("vistaCarga").style.display = "none";
+    if (sesion) { USUARIO_ACTIVO = sesion; mostrarPantallaEscaneo(); }
+    else { document.getElementById("vistaLogin").style.display = "flex"; }
+  };
+</script>
+
+</body>
+</html>
