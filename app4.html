@@ -53,6 +53,14 @@
   }
   #sesionActiva { font-size: 12px; opacity: 0.9; }
   #debugInfo { font-size: 11px; opacity: 0.85; margin-top: 4px; word-break: break-word; }
+  #panelManual { margin-top: 8px; display: flex; gap: 6px; }
+  #panelManual input {
+    flex: 1; padding: 8px 10px; border-radius: 6px; border: none; font-size: 14px;
+  }
+  #panelManual button {
+    padding: 8px 14px; border: none; border-radius: 6px; background: #d9a13c; color: #1e3a5f;
+    font-weight: bold; font-size: 13px; cursor: pointer;
+  }
   #btnCerrarSesion {
     position: absolute; bottom: 10px; right: 16px; z-index: 6;
     font-size: 11px; opacity: 0.6; color: #fff; background: none; border: none; cursor: pointer;
@@ -100,6 +108,10 @@
   <div id="panelTop">
     <div id="sesionActiva"></div>
     <div id="debugInfo"></div>
+    <div id="panelManual">
+      <input type="text" id="idManual" placeholder="ID del estudiante (Ej: JAQ001)" onkeydown="if(event.key==='Enter') registrarIdManual()">
+      <button onclick="registrarIdManual()">Registrar</button>
+    </div>
   </div>
 </div>
 
@@ -210,6 +222,18 @@
     if (procesando) return;
     var idQR = idDetectado.trim().toUpperCase();
     if (idQR === ultimoIdMostrado) return;
+    procesando = true;
+    ultimoIdMostrado = idQR;
+    registrarComoEmergencia(idQR);
+  }
+
+  // Permite escribir el ID a mano (para pruebas, o si un carnet no escanea bien)
+  function registrarIdManual() {
+    var input = document.getElementById("idManual");
+    var idQR = input.value.trim().toUpperCase();
+    if (!idQR) return;
+    input.value = "";
+    if (procesando) return;
     procesando = true;
     ultimoIdMostrado = idQR;
     registrarComoEmergencia(idQR);
