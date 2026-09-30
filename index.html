@@ -142,7 +142,12 @@
   // ---------- Utilidades de hora local ----------
   function minutosDesdeTexto(txt) { var p = String(txt).split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
   function horaActualMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
-  function esFinDeSemana() { var dia = new Date().getDay(); return dia === 0 || dia === 6; } // 0=domingo, 6=sábado
+  // OJO: esto ya NO usa el reloj del celular/tableta (eso fue el bug del
+  // 30/09: si el reloj de un dispositivo está mal configurado, creía que
+  // era fin de semana y bloqueaba todo sin mostrar ningún aviso). Ahora usa
+  // la fecha que manda el SERVIDOR dentro de CONFIG, la misma fuente
+  // confiable que se usa para todo lo demás en el sistema.
+  function esFinDeSemana() { return !!(CFG && CFG.esFinDeSemanaServidor); }
   function horaActualTexto() {
     var d = new Date();
     return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
@@ -201,14 +206,10 @@
   }
 
   // ---------- Sincronización entre tabletas ----------
-  // Como cada tableta guarda su propio registro local, un estudiante que
-  // marca entrada en una tableta y sale en otra no se reconoce de
-  // inmediato entre equipos. Para que eso sea instantáneo la mayoría de
-  // las veces (y no dependa solo del "caso ambiguo" que consulta al
-  // servidor al momento), cada tableta se sincroniza sola cada 15
-  // segundos, preguntando al servidor quién ya registró hoy y fusionando
-  // esa información con su memoria local.
-  var INTERVALO_SYNC_MS = 15000;
+  // Se sincroniza UNA vez, al abrir la pantalla de escaneo (no cada 15s,
+  // eso sobrecargó el servidor) — suficiente para que cada tableta
+  // arranque con el estado real del día. El "caso ambiguo" (otro
+  // dispositivo) se resuelve al momento, consultando directo al servidor.
   function sincronizarEstadoHoy() {
     fetch(WEBAPP_URL + "?accion=estadoAsistenciaHoy")
       .then(function (r) { return r.json(); })
@@ -223,11 +224,7 @@
         });
         localStorage.setItem(clave, JSON.stringify(registros));
       })
-      .catch(function () { /* si falla, no pasa nada: se sigue intentando cada 15s */ });
-  }
-  function iniciarSincronizacionPeriodica() {
-    sincronizarEstadoHoy();
-    setInterval(sincronizarEstadoHoy, INTERVALO_SYNC_MS);
+      .catch(function () { /* si falla, no pasa nada, no bloquea el escaneo */ });
   }
 
   // ---------- CONFIG (una sola vez al abrir; botón manual para recargar) ----------
@@ -241,22 +238,25 @@
   }
   function configPorDefecto() {
     return { HORA_PUNTUAL_DESDE: "00:00", HORA_PUNTUAL_HASTA: "12:43", HORA_TARDE_HASTA: "13:59",
-             HORA_SALIDA_DESDE: "18:16", HORA_SALIDA_HASTA: "18:45" };
+             HORA_SALIDA_DESDE: "18:16", HORA_SALIDA_HASTA: "18:45", esFinDeSemanaServidor: false };
   }
 
   function mostrarPantallaEscaneo() {
     document.getElementById("vistaCarga").style.display = "none";
     document.getElementById("vistaEscaneo").style.display = "flex";
     document.getElementById("sesionActiva").textContent = "Sesión: " + USUARIO_ACTIVO.nombre;
+    var nombresDia = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
     document.getElementById("debugInfo").textContent =
       "PUNTUAL " + CFG.HORA_PUNTUAL_DESDE + "-" + CFG.HORA_PUNTUAL_HASTA + " | TARDE hasta " + CFG.HORA_TARDE_HASTA +
-      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA;
+      " | SALIDA " + CFG.HORA_SALIDA_DESDE + "-" + CFG.HORA_SALIDA_HASTA +
+      " | Hoy (servidor): " + (CFG.esFinDeSemanaServidor ? "FIN DE SEMANA — bloqueado" : "día de clases") +
+      " | Hoy (este dispositivo): " + nombresDia[new Date().getDay()];
     if (USUARIO_ACTIVO.rol === "SUPERADMIN") {
       document.getElementById("btnReiniciar").style.display = "inline-block";
       document.getElementById("btnResetearTodo").style.display = "inline-block";
     }
     iniciarEscaner();
-    iniciarSincronizacionPeriodica();
+    sincronizarEstadoHoy();
   }
 
   function actualizarReloj() {
