@@ -224,6 +224,7 @@
     if (idQR === ultimoIdMostrado) return;
     procesando = true;
     ultimoIdMostrado = idQR;
+    mostrarProcesando(idQR);
     registrarComoEmergencia(idQR);
   }
 
@@ -236,7 +237,23 @@
     if (procesando) return;
     procesando = true;
     ultimoIdMostrado = idQR;
+    mostrarProcesando(idQR);
     registrarComoEmergencia(idQR);
+  }
+
+  // Feedback inmediato: se muestra al instante (sin esperar al servidor) para
+  // que el registro se sienta rápido, aunque la conexión demore un momento.
+  function mostrarProcesando(idQR) {
+    document.getElementById("vistaEscaneo").style.display = "none";
+    document.getElementById("vistaResultado").style.display = "flex";
+    var icono = document.getElementById("iconoResultado");
+    var estadoDiv = document.getElementById("estadoTexto");
+    icono.className = "icono-resultado";
+    icono.textContent = "…";
+    estadoDiv.className = "";
+    estadoDiv.textContent = "Registrando...";
+    document.getElementById("nombreEstudiante").textContent = idQR;
+    document.getElementById("detalleEstudiante").textContent = "Un momento";
   }
 
   function registrarComoEmergencia(idQR) {
