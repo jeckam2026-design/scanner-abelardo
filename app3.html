@@ -146,6 +146,9 @@
   .FUERA-DE-HORARIO { background: #ffe4c4; color: #a65b00; }
   .SIN-DATO { background: #eceff1; color: #666; }
   .JUSTIFICADO { background: #dbe9ff; color: #1a4d8a; }
+  /* La salida todavía no se está marcando: sus columnas se ocultan.
+     Para volver a mostrarlas, cambiar MOSTRAR_SALIDA a true en el script. */
+  body.sin-salida .col-salida { display: none; }
   #cargando { text-align: center; font-size: 13px; color: #666; padding: 10px; display: none; }
   .pie {
     text-align: center;
@@ -209,8 +212,8 @@
           <th>Fecha</th>
           <th>Entrada</th>
           <th>Estado</th>
-          <th>Salida</th>
-          <th>Estado</th>
+          <th class="col-salida">Salida</th>
+          <th class="col-salida">Estado</th>
         </tr>
       </thead>
       <tbody id="cuerpoTabla"></tbody>
@@ -225,6 +228,11 @@
 <script>
   // Reemplaza esto por tu WEBAPP_URL real (el mismo que pusiste en la hoja CONFIG)
   var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwbFz2SlvxX-gbRIf9pjTBkgw4qZLZLwLicssIAKWYROEZqkDXaIguMiyXy3MkjsddC/exec";
+
+  // Mientras la salida no se esté marcando, se oculta del reporte de padres.
+  // Cuando empiecen a marcar salida: cambiar a true.
+  var MOSTRAR_SALIDA = false;
+  document.body.classList.toggle("sin-salida", !MOSTRAR_SALIDA);
 
   function mostrarRango() {
     var div = document.getElementById("rango-personalizado");
@@ -325,7 +333,7 @@
     var registrosLaborables = data.registros.filter(function (r) { return !esFechaFinDeSemana(r.fecha); });
 
     if (registrosLaborables.length === 0) {
-      cuerpo.innerHTML = "<tr><td colspan='5'>No hay registros en este rango de fechas.</td></tr>";
+      cuerpo.innerHTML = "<tr><td colspan='" + (MOSTRAR_SALIDA ? 5 : 3) + "'>No hay registros en este rango de fechas.</td></tr>";
       return;
     }
 
@@ -336,8 +344,8 @@
         "<td>" + r.fecha + "</td>" +
         "<td>" + (r.horaEntrada || "-") + "</td>" +
         "<td><span class='estado " + estEnt.clase + "'>" + estEnt.texto + "</span></td>" +
-        "<td>" + (r.horaSalida || "-") + "</td>" +
-        "<td><span class='estado " + claseEstado(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>";
+        "<td class='col-salida'>" + (r.horaSalida || "-") + "</td>" +
+        "<td class='col-salida'><span class='estado " + claseEstado(r.estadoSalida) + "'>" + (r.estadoSalida || "-") + "</span></td>";
       cuerpo.appendChild(fila);
     });
   }
